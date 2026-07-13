@@ -1,180 +1,131 @@
-try {
-    const chartProperties = {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        layout: {
-            backgroundColor: '#0f131a',
-            textColor: '#d1d4dc',
-        },
-        grid: {
-            vertLines: { color: 'rgba(255, 255, 255, 0.04)', style: 1 },
-            horzLines: { color: 'rgba(255, 255, 255, 0.04)', style: 1 },
-        },
-        crosshair: {
-            mode: 0,
-            vertLine: { color: 'rgba(255, 255, 255, 0.1)', width: 1, style: 2, labelBackgroundColor: '#131722' },
-            horzLine: { color: 'rgba(255, 255, 255, 0.1)', width: 1, style: 2, labelBackgroundColor: '#131722' },
-        },
-        rightPriceScale: {
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-            autoScale: true,
-        },
-        timeScale: {
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-            timeVisible: true,
-            rightOffset: 12, // Space on the right like the screenshot
-            barSpacing: 12, // Match the zoom level in the screenshot
-        },
-    };
+const chartProperties = {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    layout: {
+        backgroundColor: '#0d1017',
+        textColor: '#787b86',
+        fontSize: 11,
+    },
+    grid: {
+        vertLines: { color: 'rgba(255, 255, 255, 0.02)', style: 1 },
+        horzLines: { color: 'rgba(255, 255, 255, 0.02)', style: 1 },
+    },
+    crosshair: {
+        mode: 0,
+        vertLine: { color: 'rgba(255, 255, 255, 0.1)', width: 1, style: 2, labelBackgroundColor: '#131722' },
+        horzLine: { color: 'rgba(255, 255, 255, 0.1)', width: 1, style: 2, labelBackgroundColor: '#131722' },
+    },
+    rightPriceScale: {
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+        autoScale: false,
+    },
+    timeScale: {
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+        timeVisible: true,
+        rightOffset: 25,
+        barSpacing: 10,
+    },
+    handleScroll: false,
+    handleScale: false,
+};
 
-    const chartContainer = document.getElementById('tvchart');
-    const chart = LightweightCharts.createChart(chartContainer, chartProperties);
+const chartContainer = document.getElementById('tvchart');
+const chart = LightweightCharts.createChart(chartContainer, chartProperties);
 
-    const candleSeries = chart.addCandlestickSeries({
-        upColor: '#089981',
-        downColor: '#f23645',
-        borderDownColor: '#f23645',
-        borderUpColor: '#089981',
-        wickDownColor: '#f23645',
-        wickUpColor: '#089981',
-    });
+const candleSeries = chart.addCandlestickSeries({
+    upColor: '#089981', downColor: '#f23645',
+    borderDownColor: '#f23645', borderUpColor: '#089981',
+    wickDownColor: '#f23645', wickUpColor: '#089981',
+});
 
-    // Realistic specific data matching the visual curve of the target image
-    const generateData = () => {
-        const data = [];
-        let t = 1716768000; // May 27 00:00
+// Extremely precise data generation to match the exact visual of the screenshot
+const generateData = () => {
+    const data = [];
+    let t = 1716768000; 
+    
+    // Key visual anchors to perfectly draw the chart shape
+    const anchors = [
+        4505, 4490, 4450, 4470, 4465, 4455, 4440, 4480, 4475, 4495, 
+        4520, 4515, 4540, 4535, 4560, 4580, 4610, 4625, 4640, 4645, 
+        4635, 4630, 4640, 4530 /* Giant drop */, 4535, 4520, 4515, 
+        4495, 4505, 4500, 4480, 4485, 4470, 4460, 4445, 4450, 4430, 4506.05
+    ];
+    
+    let open = 4500;
+    for (let i = 0; i < anchors.length; i++) {
+        t += 3600 * 2; // 2 hour steps to spread it out
+        let close = anchors[i];
+        let high = Math.max(open, close) + Math.random() * 5;
+        let low = Math.min(open, close) - Math.random() * 5;
         
-        // Segments: target close, number of candles, volatility factor, trend
-        const segments = [
-            [4450, 10, 6, -1],  // initial dip
-            [4475, 8, 8, 1],    // slight recovery
-            [4445, 6, 8, -1],   // another dip
-            [4640, 20, 12, 1],  // huge rally to top peak
-            [4530, 1, 0, -1],   // Massive red crash candle
-            [4525, 3, 4, -1],   // hover after crash
-            [4510, 5, 5, -1],   // slow bleed
-            [4506.05, 2, 2, -1] // current price
-        ];
-        
-        let open = 4490;
-        for (let seg of segments) {
-            let target = seg[0];
-            let count = seg[1];
-            let vol = seg[2];
-            let step = (target - open) / count;
-            
-            for (let i = 0; i < count; i++) {
-                t += 3600; // 1 hr steps
-                let close;
-                if (i === count - 1) {
-                    close = target;
-                } else {
-                    close = open + step + (Math.random() * vol - vol/2);
-                }
-                
-                let high = Math.max(open, close) + Math.random() * vol;
-                let low = Math.min(open, close) - Math.random() * vol;
-                
-                if (count === 1 && target === 4530) {
-                    high = 4645; low = 4520; // Exact shape of the huge drop
-                }
-                
-                data.push({ time: t, open, high, low, close });
-                open = close;
-            }
+        // Exact giant drop
+        if (close === 4530 && open === 4640) {
+            high = 4645; low = 4525;
         }
-        return data;
+        
+        data.push({ time: t, open, high, low, close });
+        open = close;
+    }
+    return data;
+};
+
+candleSeries.setData(generateData());
+
+// Set fixed scale to perfectly match the image bounds (4425 to 4625 roughly)
+chart.priceScale('right').applyOptions({
+    autoScale: false,
+    scaleMargins: { top: 0.1, bottom: 0.1 },
+});
+candleSeries.applyOptions({
+    autoscaleInfoProvider: () => ({
+        priceRange: { minValue: 4425, maxValue: 4625 },
+        margins: { above: 10, below: 10 }
+    })
+});
+
+// Current Price Line on the axis
+candleSeries.createPriceLine({
+    price: 4506.05,
+    color: '#2962FF',
+    lineWidth: 1,
+    lineStyle: 1,
+    axisLabelVisible: true,
+    title: '',
+});
+
+// Sync HTML overlays with chart coordinates
+const syncOverlays = () => {
+    const levels = {
+        'line-sl': 4527.8,
+        'line-vwap': 4514.9,
+        'line-entry-high': 4516.8,
+        'line-entry-low': 4506.7,
+        'line-tp1': 4473.6,
+        'line-tp2': 4453.8,
+        'line-tp3': 4440.9
     };
+    
+    for (const [id, price] of Object.entries(levels)) {
+        const y = candleSeries.priceToCoordinate(price);
+        const el = document.getElementById(id);
+        if (el && y !== null) el.style.top = y + 'px';
+    }
+    
+    // Entry Zone shading
+    const yHigh = candleSeries.priceToCoordinate(4516.8);
+    const yLow = candleSeries.priceToCoordinate(4506.7);
+    const zone = document.getElementById('entry-zone');
+    if (zone && yHigh !== null && yLow !== null) {
+        zone.style.top = Math.min(yHigh, yLow) + 'px';
+        zone.style.height = Math.abs(yHigh - yLow) + 'px';
+    }
+};
 
-    candleSeries.setData(generateData());
+chart.timeScale().subscribeVisibleTimeRangeChange(syncOverlays);
+// Trigger once after render
+setTimeout(syncOverlays, 100);
 
-    // 1. Stop Loss - Solid Red Line
-    candleSeries.createPriceLine({
-        price: 4527.8,
-        color: '#f23645',
-        lineWidth: 2,
-        lineStyle: 0,
-        axisLabelVisible: true,
-        title: 'SL (-15.98$)',
-    });
-
-    // 2. Entry High
-    candleSeries.createPriceLine({
-        price: 4516.8,
-        color: '#ffaa00',
-        lineWidth: 1,
-        lineStyle: 0,
-        axisLabelVisible: true,
-        title: 'ENTRY',
-    });
-
-    // 3. VWAP
-    candleSeries.createPriceLine({
-        price: 4514.9,
-        color: '#ffaa00',
-        lineWidth: 1,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: 'VWAP-D',
-    });
-
-    // 4. Entry Low
-    candleSeries.createPriceLine({
-        price: 4506.7,
-        color: '#ffaa00',
-        lineWidth: 1,
-        lineStyle: 0,
-        axisLabelVisible: false,
-    });
-
-    // 5. TP1
-    candleSeries.createPriceLine({
-        price: 4473.6,
-        color: '#089981',
-        lineWidth: 2,
-        lineStyle: 0,
-        axisLabelVisible: true,
-        title: 'TP1 (1:2.39)',
-    });
-
-    // 6. TP2
-    candleSeries.createPriceLine({
-        price: 4453.8,
-        color: '#089981',
-        lineWidth: 2,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: 'TP2 (1:3.63)',
-    });
-
-    // 7. TP3
-    candleSeries.createPriceLine({
-        price: 4440.9,
-        color: '#089981',
-        lineWidth: 2,
-        lineStyle: 2,
-        axisLabelVisible: true,
-        title: 'TP3 (1:4.44)',
-    });
-
-    // Current Price line (Blue)
-    candleSeries.createPriceLine({
-        price: 4506.05,
-        color: '#2962FF',
-        lineWidth: 1,
-        lineStyle: 1, // Dotted
-        axisLabelVisible: true,
-        title: '',
-    });
-
-    window.addEventListener('resize', () => {
-        chart.resize(window.innerWidth, window.innerHeight);
-    });
-
-} catch (e) {
-    document.body.innerHTML += `<div style="color:red; z-index:9999; position:absolute; top:50px; left:50px; background:white; padding:20px; font-family:sans-serif; border:2px solid red;">
-        <h3>Chart Rendering Error</h3>
-        <b>Message:</b> ${e.message}<br><br>
-        <b>Stack:</b> <pre>${e.stack}</pre>
-    </div>`;
-}
+window.addEventListener('resize', () => {
+    chart.resize(window.innerWidth, window.innerHeight);
+    syncOverlays();
+});
