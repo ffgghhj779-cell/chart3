@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gold Nightmare Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Lightweight Charts library from TradingView -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <!-- Background Watermark -->
+    <div class="watermark-container">
+        <div class="watermark-hexagon">⬡</div>
+        <div class="watermark-text">GN<br>Lab</div>
+    </div>
+
+    <!-- Chart Container -->
+    <div id="tvchart"></div>
+
+    <!-- UI Overlays -->
+    <!-- Top Left -->
+    <div class="overlay top-left">
+        <div class="ticker">XAUUSD <span class="timeframe">H1</span></div>
+        <div class="strategy-name">كابوس الذهب</div>
+        <div class="date-info">2026-06-01 13:39 Amman</div>
+    </div>
+
+    <!-- Top Center -->
+    <div class="overlay top-center">
+        <div class="sell-badge">SELL</div>
+        <div class="setup-info">بيع - إعداد C - ثقة 48%</div>
+    </div>
+
+    <!-- Top Right -->
+    <div class="overlay top-right">
+        <div class="c-badge">C</div>
+    </div>
+
+    <!-- Bottom Left Trade Plan Table -->
+    <div class="overlay bottom-left">
+        <div class="plan-title">خطة الصفقة <span class="fvg-text">FVG</span></div>
+        <table class="plan-table">
+            <tr>
+                <td class="col-label">ENTRY</td>
+                <td class="col-value">4,506.7 - 4,516.8</td>
+            </tr>
+            <tr>
+                <td class="col-label">STOP</td>
+                <td class="col-value">4,527.8 <span class="divider">|</span> RISK -15.98$</td>
+            </tr>
+            <tr>
+                <td class="col-label">TP1</td>
+                <td class="col-value">4,473.6 <span class="divider">|</span> 1:2.39</td>
+            </tr>
+            <tr>
+                <td class="col-label">TP2</td>
+                <td class="col-value">4,453.8 <span class="divider">|</span> 1:3.63</td>
+            </tr>
+            <tr>
+                <td class="col-label">TP3</td>
+                <td class="col-value">4,440.9 <span class="divider">|</span> 1:4.44</td>
+            </tr>
+            <tr>
+                <td class="col-label">CONV</td>
+                <td class="col-value">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" style="width: 48%;"></div>
+                    </div>
+                    48%
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Bottom Right Lab text -->
+    <div class="overlay bottom-right">
+        Gold Nightmare Intelligence Lab
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
