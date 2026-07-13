@@ -5,39 +5,37 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gold Nightmare Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Lightweight Charts library from TradingView -->
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body>
     <!-- Background Watermark -->
     <div class="watermark-container">
-        <div class="watermark-hexagon">⬡</div>
-        <div class="watermark-text">GN<br>Lab</div>
+        <svg viewBox="0 0 200 200" width="500" height="500" opacity="0.03">
+            <polygon points="100,10 180,50 180,150 100,190 20,150 20,50" fill="none" stroke="#ffaa00" stroke-width="4"/>
+            <!-- Crown -->
+            <path d="M 60 70 L 70 40 L 100 60 L 130 40 L 140 70 Z" fill="#ffaa00" opacity="0.8"/>
+            <text x="100" y="135" font-family="Arial" font-size="65" font-weight="900" fill="#ffaa00" text-anchor="middle" letter-spacing="2">GN</text>
+            <text x="100" y="165" font-family="Arial" font-size="20" font-weight="bold" fill="#ffaa00" text-anchor="middle">Lab</text>
+        </svg>
     </div>
 
-    <!-- Chart Container -->
     <div id="tvchart"></div>
 
-    <!-- UI Overlays -->
-    <!-- Top Left -->
     <div class="overlay top-left">
         <div class="ticker">XAUUSD <span class="timeframe">H1</span></div>
         <div class="strategy-name">كابوس الذهب</div>
         <div class="date-info">2026-06-01 13:39 Amman</div>
     </div>
 
-    <!-- Top Center -->
     <div class="overlay top-center">
         <div class="sell-badge">SELL</div>
         <div class="setup-info">بيع - إعداد C - ثقة 48%</div>
     </div>
 
-    <!-- Top Right -->
     <div class="overlay top-right">
         <div class="c-badge">C</div>
     </div>
 
-    <!-- Bottom Left Trade Plan Table -->
     <div class="overlay bottom-left">
         <div class="plan-title">خطة الصفقة <span class="fvg-text">FVG</span></div>
         <table class="plan-table">
@@ -73,7 +71,6 @@
         </table>
     </div>
 
-    <!-- Bottom Right Lab text -->
     <div class="overlay bottom-right">
         Gold Nightmare Intelligence Lab
     </div>

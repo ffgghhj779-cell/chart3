@@ -3,22 +3,27 @@ try {
         width: window.innerWidth,
         height: window.innerHeight,
         layout: {
-            background: { type: 'solid', color: '#131722' },
+            backgroundColor: '#0f131a',
             textColor: '#d1d4dc',
         },
         grid: {
-            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
-            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            vertLines: { color: 'rgba(255, 255, 255, 0.04)', style: 1 },
+            horzLines: { color: 'rgba(255, 255, 255, 0.04)', style: 1 },
         },
         crosshair: {
-            mode: 0, // Normal
+            mode: 0,
+            vertLine: { color: 'rgba(255, 255, 255, 0.1)', width: 1, style: 2, labelBackgroundColor: '#131722' },
+            horzLine: { color: 'rgba(255, 255, 255, 0.1)', width: 1, style: 2, labelBackgroundColor: '#131722' },
         },
         rightPriceScale: {
-            borderColor: 'rgba(197, 203, 206, 0.8)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            autoScale: true,
         },
         timeScale: {
-            borderColor: 'rgba(197, 203, 206, 0.8)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
             timeVisible: true,
+            rightOffset: 12, // Space on the right like the screenshot
+            barSpacing: 12, // Match the zoom level in the screenshot
         },
     };
 
@@ -34,70 +39,71 @@ try {
         wickUpColor: '#089981',
     });
 
-    // Generate realistic looking mock data matching the image
+    // Realistic specific data matching the visual curve of the target image
     const generateData = () => {
-        let data = [];
-        let time = new Date('2026-05-27T00:00:00Z').getTime() / 1000;
-        let open = 4450;
-        let high, low, close;
-
-        // Up trend first
-        for (let i = 0; i < 40; i++) {
-            time += 3600; // 1 hour in seconds
-            let volatility = Math.random() * 15;
-            close = open + (Math.random() * 20 - 5);
-            high = Math.max(open, close) + Math.random() * 10;
-            low = Math.min(open, close) - Math.random() * 10;
-            data.push({ time: time, open, high, low, close });
-            open = close;
+        const data = [];
+        let t = 1716768000; // May 27 00:00
+        
+        // Segments: target close, number of candles, volatility factor, trend
+        const segments = [
+            [4450, 10, 6, -1],  // initial dip
+            [4475, 8, 8, 1],    // slight recovery
+            [4445, 6, 8, -1],   // another dip
+            [4640, 20, 12, 1],  // huge rally to top peak
+            [4530, 1, 0, -1],   // Massive red crash candle
+            [4525, 3, 4, -1],   // hover after crash
+            [4510, 5, 5, -1],   // slow bleed
+            [4506.05, 2, 2, -1] // current price
+        ];
+        
+        let open = 4490;
+        for (let seg of segments) {
+            let target = seg[0];
+            let count = seg[1];
+            let vol = seg[2];
+            let step = (target - open) / count;
+            
+            for (let i = 0; i < count; i++) {
+                t += 3600; // 1 hr steps
+                let close;
+                if (i === count - 1) {
+                    close = target;
+                } else {
+                    close = open + step + (Math.random() * vol - vol/2);
+                }
+                
+                let high = Math.max(open, close) + Math.random() * vol;
+                let low = Math.min(open, close) - Math.random() * vol;
+                
+                if (count === 1 && target === 4530) {
+                    high = 4645; low = 4520; // Exact shape of the huge drop
+                }
+                
+                data.push({ time: t, open, high, low, close });
+                open = close;
+            }
         }
-
-        // The peak
-        open = close;
-        close = 4530;
-        high = 4535;
-        low = open - 5;
-        time += 3600;
-        data.push({ time: time, open, high, low, close });
-
-        // The drop
-        open = 4530;
-        for (let i = 0; i < 20; i++) {
-            time += 3600;
-            close = open - (Math.random() * 15 + 2);
-            high = open + Math.random() * 5;
-            low = close - Math.random() * 10;
-            data.push({ time: time, open, high, low, close });
-            open = close;
-        }
-
         return data;
     };
 
-    const candleData = generateData();
-    candleSeries.setData(candleData);
+    candleSeries.setData(generateData());
 
-    // Set visible range to match the picture zoom level
-    chart.timeScale().fitContent();
-
-    // Add Price Lines to replicate the Dashboard Lines
-
-    // 1. Stop Loss
+    // 1. Stop Loss - Solid Red Line
     candleSeries.createPriceLine({
         price: 4527.8,
         color: '#f23645',
         lineWidth: 2,
-        lineStyle: 0, // Solid
+        lineStyle: 0,
         axisLabelVisible: true,
         title: 'SL (-15.98$)',
     });
 
-    // 2. Entry Zone High
+    // 2. Entry High
     candleSeries.createPriceLine({
         price: 4516.8,
         color: '#ffaa00',
         lineWidth: 1,
-        lineStyle: 0, // Solid
+        lineStyle: 0,
         axisLabelVisible: true,
         title: 'ENTRY',
     });
@@ -107,17 +113,17 @@ try {
         price: 4514.9,
         color: '#ffaa00',
         lineWidth: 1,
-        lineStyle: 2, // Dashed
+        lineStyle: 2,
         axisLabelVisible: true,
         title: 'VWAP-D',
     });
 
-    // 4. Entry Zone Low
+    // 4. Entry Low
     candleSeries.createPriceLine({
         price: 4506.7,
         color: '#ffaa00',
         lineWidth: 1,
-        lineStyle: 0, // Solid
+        lineStyle: 0,
         axisLabelVisible: false,
     });
 
@@ -126,7 +132,7 @@ try {
         price: 4473.6,
         color: '#089981',
         lineWidth: 2,
-        lineStyle: 0, // Solid
+        lineStyle: 0,
         axisLabelVisible: true,
         title: 'TP1 (1:2.39)',
     });
@@ -136,7 +142,7 @@ try {
         price: 4453.8,
         color: '#089981',
         lineWidth: 2,
-        lineStyle: 2, // Dashed
+        lineStyle: 2,
         axisLabelVisible: true,
         title: 'TP2 (1:3.63)',
     });
@@ -146,18 +152,26 @@ try {
         price: 4440.9,
         color: '#089981',
         lineWidth: 2,
-        lineStyle: 2, // Dashed
+        lineStyle: 2,
         axisLabelVisible: true,
         title: 'TP3 (1:4.44)',
     });
 
-    // Handle window resize
+    // Current Price line (Blue)
+    candleSeries.createPriceLine({
+        price: 4506.05,
+        color: '#2962FF',
+        lineWidth: 1,
+        lineStyle: 1, // Dotted
+        axisLabelVisible: true,
+        title: '',
+    });
+
     window.addEventListener('resize', () => {
         chart.resize(window.innerWidth, window.innerHeight);
     });
 
 } catch (e) {
-    // If anything fails, print it to the screen so we know exactly why the chart didn't load!
     document.body.innerHTML += `<div style="color:red; z-index:9999; position:absolute; top:50px; left:50px; background:white; padding:20px; font-family:sans-serif; border:2px solid red;">
         <h3>Chart Rendering Error</h3>
         <b>Message:</b> ${e.message}<br><br>
