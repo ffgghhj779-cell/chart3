@@ -1,206 +1,116 @@
 //@version=5
-indicator("Gold Nightmare Professional Trade Planner", overlay=true, max_labels_count=500, max_lines_count=500)
+indicator("Gold Nightmare Intelligence Lab", shorttitle="GN Lab", overlay=true, max_lines_count=500, max_boxes_count=500, max_labels_count=500)
 
-// ==============================================================================
-// 1. PREMIUM INPUTS WITH TOOLTIPS
-// ==============================================================================
-groupTrade = "💰 Trade Risk & Account Settings"
-accountBalance = input.float(10000, title="Account Balance ($)", group=groupTrade, tooltip="Enter your total account balance here to calculate exact dollar risk.")
-riskPercent    = input.float(1.5, title="Risk Per Trade (%)", group=groupTrade, tooltip="The percentage of your account you are willing to risk on this trade.")
+// ==========================================
+// 1. INPUTS
+// ==========================================
+grp_trade = "إعدادات الصفقة (Trade Setup)"
+i_active   = input.bool(true, "تفعيل الصفقة الحالية؟", group=grp_trade)
+i_type     = input.string("SELL", "نوع الصفقة", options=["BUY", "SELL"], group=grp_trade)
+i_entryHigh= input.price(4516.8, "الحد الأعلى للدخول", inline="entry", group=grp_trade)
+i_entryLow = input.price(4506.7, "الحد الأدنى للدخول", inline="entry", group=grp_trade)
+i_sl       = input.price(4527.8, "وقف الخسارة (SL)", group=grp_trade)
+i_tp1      = input.price(4473.6, "الهدف الأول (TP1)", group=grp_trade)
+i_tp2      = input.price(4453.8, "الهدف الثاني (TP2)", group=grp_trade)
+i_tp3      = input.price(4440.9, "الهدف الثالث (TP3)", group=grp_trade)
 
-groupSetup = "🎯 Setup Levels (Manual/Dynamic)"
-entryHigh = input.price(4516.8, title="Entry Zone High", group=groupSetup, tooltip="The upper boundary of your entry block (e.g., Order Block or FVG high).")
-entryLow  = input.price(4506.7, title="Entry Zone Low", group=groupSetup, tooltip="The lower boundary of your entry block.")
-slPrice   = input.price(4527.8, title="Stop Loss Price", group=groupSetup, tooltip="Invalidation point. If price hits this, the trade is automatically calculated as a loss.")
-
-groupRR = "⚖️ Risk/Reward Targets"
-rr1 = input.float(2.39, title="TP1 Risk/Reward Ratio", group=groupRR, tooltip="Multiplier for Take Profit 1.")
-rr2 = input.float(3.63, title="TP2 Risk/Reward Ratio", group=groupRR, tooltip="Multiplier for Take Profit 2.")
-rr3 = input.float(4.44, title="TP3 Risk/Reward Ratio", group=groupRR, tooltip="Multiplier for Take Profit 3.")
-
-groupVisuals = "🎨 Premium Visuals"
-isMobile        = input.bool(false, title="📱 Mobile Screen Optimization", group=groupVisuals, tooltip="Enable this if viewing on a smartphone. It smartly resizes and aligns all text and tables to look premium on narrow screens without cluttering.")
-showWatermark   = input.bool(true, title="Show Background Watermark", group=groupVisuals)
-dashboardTransp = input.int(10, title="Dashboard Transparency", minval=0, maxval=100, group=groupVisuals)
+grp_ui = "واجهة المستخدم (UI)"
+i_riskAmt    = input.float(-15.98, "مبلغ المخاطرة بالدولار", group=grp_ui)
+i_confidence = input.int(48, "نسبة الثقة %", group=grp_ui)
+i_setup      = input.string("C", "نوع الإعداد", group=grp_ui)
 
 // Colors
-colorRed      = color.rgb(255, 0, 0)
-colorGreen    = color.rgb(0, 255, 0)
-colorGold     = color.rgb(255, 170, 0)
-colorDarkBlue = color.rgb(0, 51, 204)
-colorDarkBg   = color.new(#131722, dashboardTransp)
-colorWhite    = color.white
-colorBlack    = color.black
+color_sl = #f23645
+color_tp = #089981
+color_entry = #ffaa00
+color_bg = color.new(#0d1017, 10)
+color_text = #d1d4dc
 
-// Responsive Sizing Engine
-szHuge   = isMobile ? size.large : size.huge
-szLarge  = isMobile ? size.normal : size.large
-szNormal = isMobile ? size.small : size.normal
-szSmall  = isMobile ? size.tiny : size.small
-szTiny   = size.tiny // Tiny is the absolute minimum limit for readability
+// ==========================================
+// 2. DYNAMIC CALCULATIONS (RR & VWAP)
+// ==========================================
+// Calculate Risk Reward automatically
+calcRR(target) =>
+    entryMid = (i_entryHigh + i_entryLow) / 2
+    risk = math.abs(i_sl - entryMid)
+    reward = math.abs(target - entryMid)
+    risk == 0 ? 0 : (reward / risk)
 
-// ==============================================================================
-// 2. DYNAMIC CALCULATIONS & ALGORITHMS
-// ==============================================================================
-vwapD = ta.vwap(close)
-avgEntry = (entryHigh + entryLow) / 2
-riskDistance = math.abs(slPrice - avgEntry)
-isShort = slPrice > avgEntry
+rr1 = calcRR(i_tp1)
+rr2 = calcRR(i_tp2)
+rr3 = calcRR(i_tp3)
 
-tp1Price = isShort ? avgEntry - (riskDistance * rr1) : avgEntry + (riskDistance * rr1)
-tp2Price = isShort ? avgEntry - (riskDistance * rr2) : avgEntry + (riskDistance * rr2)
-tp3Price = isShort ? avgEntry - (riskDistance * rr3) : avgEntry + (riskDistance * rr3)
+// Daily VWAP (Dynamic indicator on chart)
+var float vwap_d = na
+vwap_d := ta.vwap(hlc3)
 
-riskAmount = accountBalance * (riskPercent / 100)
-riskStr = "-" + str.tostring(riskAmount, "#.##") + "$"
+// ==========================================
+// 3. DRAWING LINES AND BOXES
+// ==========================================
+// Draw only on the last bar to keep the chart clean
+if barstate.islast and i_active
+    // Entry Zone Box
+    box.new(left=bar_index - 50, top=i_entryHigh, right=bar_index + 20, bottom=i_entryLow, 
+             border_color=color.new(color_entry, 50), border_width=1, 
+             bgcolor=color.new(color_entry, 90), text="ENTRY", text_color=color.new(color_entry, 20), text_halign=text.align_right)
 
-sma50 = ta.sma(close, 50)
-sma200 = ta.sma(close, 200)
-trendAlign = (isShort and close < vwapD and close < sma50) or (not isShort and close > vwapD and close > sma50)
-strongTrend = (isShort and sma50 < sma200) or (not isShort and sma50 > sma200)
+    // Helper function to draw lines with labels on the right
+    drawLineAndLabel(price, col, style, labelText) =>
+        line.new(bar_index - 50, price, bar_index + 20, price, color=col, style=style, width=1)
+        label.new(bar_index + 20, price, text=labelText, color=color.new(col, 80), textcolor=col, style=label.style_label_left, size=size.small)
 
-confidence = trendAlign and strongTrend ? 92 : trendAlign ? 75 : 48
-confBars = confidence > 90 ? "▓▓▓▓▓" : confidence > 70 ? "▓▓▓▓░" : "▓▓▓░░"
+    // Draw SL
+    sl_text = "SL " + str.tostring(i_sl) + " (" + str.tostring(i_riskAmt) + "$)"
+    drawLineAndLabel(i_sl, color_sl, line.style_solid, sl_text)
+    
+    // Draw TPs
+    drawLineAndLabel(i_tp1, color_tp, line.style_dashed, "TP1 " + str.tostring(i_tp1) + " (1:" + str.tostring(rr1, "#.##") + ")")
+    drawLineAndLabel(i_tp2, color_tp, line.style_dashed, "TP2 " + str.tostring(i_tp2) + " (1:" + str.tostring(rr2, "#.##") + ")")
+    drawLineAndLabel(i_tp3, color_tp, line.style_dashed, "TP3 " + str.tostring(i_tp3) + " (1:" + str.tostring(rr3, "#.##") + ")")
 
-// ==============================================================================
-// 3. PREMIUM UI & VISUALS
-// ==============================================================================
-// Shorter lines on mobile to prevent spanning across the entire narrow screen
-var int lookback = isMobile ? 40 : 80 
+    // Draw Dynamic VWAP
+    if not na(vwap_d)
+        drawLineAndLabel(vwap_d, color_entry, line.style_dashed, "VWAP-D " + str.tostring(vwap_d, "#.##"))
 
-var table watermarkTb = table.new(position.middle_center, 1, 1)
-if showWatermark and barstate.islast
-    table.cell(watermarkTb, 0, 0, "⬡\nGN\nLab", text_color=color.new(colorGold, 92), text_size=szHuge)
+// ==========================================
+// 4. GLASSMORPHIC DASHBOARD (TABLE)
+// ==========================================
+var table dashboard = table.new(position.bottom_left, 3, 7, border_width=1, border_color=color.new(color.white, 90), bgcolor=color_bg)
 
-var table badgeTb = table.new(position.top_right, 1, 1)
+if barstate.islast and i_active
+    // Title
+    table.cell(dashboard, 0, 0, "خطة الصفقة", text_color=color_entry, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 0, 1, "ENTRY", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 1, str.tostring(i_entryLow) + " - " + str.tostring(i_entryHigh), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+
+    table.cell(dashboard, 0, 2, "STOP", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 2, str.tostring(i_sl) + " | RISK " + str.tostring(i_riskAmt) + "$", text_color=color_text, text_halign=text.align_left, text_size=size.small)
+
+    table.cell(dashboard, 0, 3, "TP1", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 3, str.tostring(i_tp1) + " | 1:" + str.tostring(rr1, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+
+    table.cell(dashboard, 0, 4, "TP2", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 4, str.tostring(i_tp2) + " | 1:" + str.tostring(rr2, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+
+    table.cell(dashboard, 0, 5, "TP3", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 5, str.tostring(i_tp3) + " | 1:" + str.tostring(rr3, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+
+    table.cell(dashboard, 0, 6, "CONV", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 6, "████░░░░░ " + str.tostring(i_confidence) + "%", text_color=color_text, text_halign=text.align_left, text_size=size.small)
+
+// ==========================================
+// 5. TOP CENTER BADGE (SIGNAL)
+// ==========================================
+var table topCenter = table.new(position.top_center, 1, 2, bgcolor=color.new(color.black, 100))
+if barstate.islast and i_active
+    badgeColor = i_type == "SELL" ? color_sl : color_tp
+    table.cell(topCenter, 0, 0, i_type, text_color=color.white, bgcolor=badgeColor, text_size=size.large)
+    table.cell(topCenter, 0, 1, (i_type=="SELL" ? "بيع" : "شراء") + " - إعداد " + i_setup + " - ثقة " + str.tostring(i_confidence) + "%", text_color=color_text, bgcolor=color.new(color.black, 50), text_size=size.small)
+
+// ==========================================
+// 6. TOP LEFT WATERMARK
+// ==========================================
+var table topLeft = table.new(position.top_left, 1, 3, bgcolor=color.new(color.black, 100))
 if barstate.islast
-    table.cell(badgeTb, 0, 0, "C", text_color=colorWhite, text_size=szLarge, bgcolor=color.new(colorWhite, 90))
-
-var table labTb = table.new(position.bottom_right, 1, 1)
-if barstate.islast
-    table.cell(labTb, 0, 0, "Gold Nightmare Intelligence Lab", text_color=color.new(colorWhite, 70), text_size=szSmall)
-
-lowest20 = ta.lowest(low, 20)
-if ta.crossunder(close, lowest20[1])
-    label.new(bar_index, high + (syminfo.mintick * 50), "BRK", color=color.new(colorGold,80), textcolor=colorGold, style=label.style_label_down, size=szTiny)
-    line.new(bar_index-5, lowest20[1], bar_index, lowest20[1], color=colorGold, style=line.style_dashed)
-
-var line slLine = line.new(na, na, na, na, color=colorRed, width=2)
-var label slLabel = label.new(na, na, "", color=colorRed, textcolor=colorWhite, style=label.style_label_left, size=szSmall)
-
-var box entryBox = box.new(na, na, na, na, border_color=color.new(colorGold, 100), bgcolor=color.new(colorGold, 85))
-var line entryHighLine = line.new(na, na, na, na, color=colorGold, width=1)
-var line entryLowLine = line.new(na, na, na, na, color=colorGold, width=1)
-var label entryLabel = label.new(na, na, "", color=colorGold, textcolor=colorBlack, style=label.style_label_left, size=szSmall)
-var label fvgLabel = label.new(na, na, "", color=color.new(colorWhite,100), textcolor=colorGreen, style=label.style_none, size=szTiny)
-
-var line vwapLine = line.new(na, na, na, na, color=colorGold, width=1, style=line.style_dashed)
-var label vwapLabel = label.new(na, na, "", color=color.new(colorGold, 80), textcolor=colorGold, style=label.style_label_left, size=szSmall)
-
-var line priceLine = line.new(na, na, na, na, color=colorDarkBlue, width=1, style=line.style_dotted)
-var label priceLabel = label.new(na, na, "", color=colorDarkBlue, textcolor=colorWhite, style=label.style_label_left, size=szSmall)
-
-var line tp1Line = line.new(na, na, na, na, color=colorGreen, width=2)
-var label tp1Label = label.new(na, na, "", color=color.new(colorGreen, 80), textcolor=colorGreen, style=label.style_label_left, size=szSmall)
-
-var line tp2Line = line.new(na, na, na, na, color=colorGreen, width=2, style=line.style_dashed)
-var label tp2Label = label.new(na, na, "", color=color.new(colorGreen, 80), textcolor=colorGreen, style=label.style_label_left, size=szSmall)
-
-var line tp3Line = line.new(na, na, na, na, color=colorGreen, width=2, style=line.style_dashed)
-var label tp3Label = label.new(na, na, "", color=color.new(colorGreen, 80), textcolor=colorGreen, style=label.style_label_left, size=szSmall)
-
-if barstate.islast
-    int x1 = bar_index - lookback
-    int x2 = bar_index + (isMobile ? 2 : 5) // Less offset on mobile to save screen width
-    
-    line.set_xy1(slLine, x1, slPrice)
-    line.set_xy2(slLine, x2, slPrice)
-    label.set_xy(slLabel, x2, slPrice)
-    label.set_text(slLabel, "SL  " + str.tostring(slPrice) + "  (" + riskStr + ")")
-    
-    box.set_lefttop(entryBox, x1, entryHigh)
-    box.set_rightbottom(entryBox, x2, entryLow)
-    
-    line.set_xy1(entryHighLine, x1, entryHigh)
-    line.set_xy2(entryHighLine, x2, entryHigh)
-    line.set_xy1(entryLowLine, x1, entryLow)
-    line.set_xy2(entryLowLine, x2, entryLow)
-    label.set_xy(entryLabel, x2, entryLow)
-    label.set_text(entryLabel, "ENTRY  " + str.tostring(entryLow) + " - " + str.tostring(entryHigh))
-    
-    label.set_xy(fvgLabel, x1 + 5, entryLow)
-    label.set_text(fvgLabel, "FVG")
-    
-    line.set_xy1(vwapLine, x1, vwapD)
-    line.set_xy2(vwapLine, x2, vwapD)
-    label.set_xy(vwapLabel, x2, vwapD)
-    label.set_text(vwapLabel, "VWAP  " + str.tostring(vwapD, "#.##"))
-    
-    line.set_xy1(priceLine, x1, close)
-    line.set_xy2(priceLine, x2, close)
-    label.set_xy(priceLabel, x2, close)
-    label.set_text(priceLabel, str.tostring(close))
-    
-    line.set_xy1(tp1Line, x1, tp1Price)
-    line.set_xy2(tp1Line, x2, tp1Price)
-    label.set_xy(tp1Label, x2, tp1Price)
-    label.set_text(tp1Label, "TP1  " + str.tostring(tp1Price, "#.##") + "  1:" + str.tostring(rr1))
-    
-    line.set_xy1(tp2Line, x1, tp2Price)
-    line.set_xy2(tp2Line, x2, tp2Price)
-    label.set_xy(tp2Label, x2, tp2Price)
-    label.set_text(tp2Label, "TP2  " + str.tostring(tp2Price, "#.##") + "  1:" + str.tostring(rr2))
-    
-    line.set_xy1(tp3Line, x1, tp3Price)
-    line.set_xy2(tp3Line, x2, tp3Price)
-    label.set_xy(tp3Label, x2, tp3Price)
-    label.set_text(tp3Label, "TP3  " + str.tostring(tp3Price, "#.##") + "  1:" + str.tostring(rr3))
-
-// --- UI Tables ---
-var table topCenterTb = table.new(position.top_center, 2, 1, bgcolor=color.new(colorBlack, 100))
-var table topLeftTb   = table.new(position.top_left, 1, 2, bgcolor=color.new(colorBlack, 100))
-var table planTb      = table.new(position.bottom_left, 2, 7, bgcolor=colorDarkBg, frame_width=1, frame_color=color.new(color.gray, 60), border_width=0)
-
-if barstate.islast
-    string sideStr = isShort ? "SELL" : "BUY"
-    color sideColor = isShort ? colorRed : colorGreen
-    table.cell(topCenterTb, 0, 0, sideStr, text_color=colorWhite, bgcolor=sideColor, text_size=szLarge)
-    table.cell(topCenterTb, 1, 0, (isShort?"بيع":"شراء") + " - إعداد C - ثقة " + str.tostring(confidence) + "%", text_color=colorWhite, text_size=szNormal)
-
-    table.cell(topLeftTb, 0, 0, syminfo.ticker + "   " + timeframe.period, text_color=colorWhite, text_size=szLarge, text_halign=text.align_left)
-    table.cell(topLeftTb, 0, 1, "كابوس الذهب", text_color=colorGold, text_size=szNormal, text_halign=text.align_left)
-
-    table.cell(planTb, 0, 0, "خطة الصفقة", text_color=colorGold, text_size=szSmall, text_halign=text.align_left)
-    table.cell(planTb, 1, 0, "", text_color=colorWhite, text_size=szSmall) 
-    
-    table.cell(planTb, 0, 1, "ENTRY", text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    table.cell(planTb, 1, 1, str.tostring(entryLow) + " - " + str.tostring(entryHigh), text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    
-    table.cell(planTb, 0, 2, "STOP", text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    table.cell(planTb, 1, 2, str.tostring(slPrice) + "  | RISK " + riskStr, text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    
-    table.cell(planTb, 0, 3, "TP1", text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    table.cell(planTb, 1, 3, str.tostring(tp1Price, "#.##") + "  | 1:" + str.tostring(rr1), text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    
-    table.cell(planTb, 0, 4, "TP2", text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    table.cell(planTb, 1, 4, str.tostring(tp2Price, "#.##") + "  | 1:" + str.tostring(rr2), text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    
-    table.cell(planTb, 0, 5, "TP3", text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    table.cell(planTb, 1, 5, str.tostring(tp3Price, "#.##") + "  | 1:" + str.tostring(rr3), text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    
-    table.cell(planTb, 0, 6, "CONV", text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-    table.cell(planTb, 1, 6, confBars + " " + str.tostring(confidence) + "%", text_color=colorWhite, text_size=szSmall, text_halign=text.align_left)
-
-// ==============================================================================
-// 4. PROFESSIONAL ALERTS SYSTEM
-// ==============================================================================
-bool hitTP1 = isShort ? ta.crossunder(low, tp1Price) : ta.crossover(high, tp1Price)
-bool hitSL  = isShort ? ta.crossover(high, slPrice) : ta.crossunder(low, slPrice)
-bool entered = isShort ? ta.crossover(high, entryLow) : ta.crossunder(low, entryHigh)
-
-if hitTP1
-    alert("Gold Nightmare: TP1 Hit for " + syminfo.ticker + "!", alert.freq_once_per_bar_close)
-if hitSL
-    alert("Gold Nightmare: Stop Loss Hit for " + syminfo.ticker + "!", alert.freq_once_per_bar_close)
-if entered
-    alert("Gold Nightmare: Entry Zone Triggered for " + syminfo.ticker + "!", alert.freq_once_per_bar_close)
+    table.cell(topLeft, 0, 0, syminfo.ticker + " " + timeframe.period, text_color=color.white, text_size=size.large, text_halign=text.align_left)
+    table.cell(topLeft, 0, 1, "كابوس الذهب", text_color=color_entry, text_size=size.normal, text_halign=text.align_left)
