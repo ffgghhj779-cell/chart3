@@ -23,8 +23,8 @@ try {
         timeScale: {
             borderColor: 'rgba(255, 255, 255, 0.05)',
             timeVisible: true,
-            rightOffset: 25,
-            barSpacing: 10,
+            rightOffset: 35,
+            barSpacing: 6,
         },
         handleScroll: false,
         handleScale: false,
@@ -37,6 +37,7 @@ try {
         upColor: '#089981', downColor: '#f23645',
         borderDownColor: '#f23645', borderUpColor: '#089981',
         wickDownColor: '#f23645', wickUpColor: '#089981',
+        lastValueVisible: false,
     });
 
     const generateData = () => {

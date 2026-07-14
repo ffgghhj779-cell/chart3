@@ -108,13 +108,19 @@ body {
     font-size: 18px; font-weight: bold; background: rgba(255,255,255,0.02);
 }
 
-.bottom-left { bottom: 40px; left: 30px; }
+.bottom-left { 
+    bottom: 40px; left: 30px; 
+    background: #0d1017;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; 
+    padding: 12px 16px;
+}
 .plan-title { color: #ffaa00; font-size: 12px; font-weight: 700; margin-bottom: 6px; position: relative; }
 .fvg-text { position: absolute; bottom: -16px; left: 0; color: #089981; font-size: 9px; }
 .plan-table {
-    background: #0d1017; /* Solid dark color to completely hide lines behind it */
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px; padding: 10px 14px;
+    background: transparent;
+    border: none;
+    padding: 0;
     border-spacing: 0;
 }
 .plan-table td { padding: 2px 10px 2px 0; font-size: 12px; color: #d1d4dc; }
