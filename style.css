@@ -7,9 +7,7 @@ body {
     color: #d1d4dc;
     font-family: 'Inter', 'Cairo', sans-serif;
     overflow: hidden;
-    /* تحسينات الموبايل: منع السحب والتحديث */
-    overscroll-behavior-y: none;
-    touch-action: none;
+    /* Allow native Lightweight Charts touch handling */
 }
 
 .top-red-bar {

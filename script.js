@@ -27,9 +27,7 @@ try {
             timeVisible: true,
             rightOffset: isMobile ? 12 : 35,
             barSpacing: isMobile ? 5 : 6,
-        },
-        handleScroll: false,
-        handleScale: false,
+        }
     };
 
     const chartContainer = document.getElementById('tvchart');
@@ -118,8 +116,11 @@ try {
         }
     };
 
-    chart.timeScale().subscribeVisibleTimeRangeChange(syncOverlays);
-    setTimeout(syncOverlays, 100);
+    const loop = () => {
+        syncOverlays();
+        requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
 
     window.addEventListener('resize', () => {
         chart.resize(window.innerWidth, window.innerHeight);
