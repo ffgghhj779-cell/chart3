@@ -14,8 +14,11 @@ i_tp1      = input.price(4473.6, "الهدف الأول (TP1)", group=grp_trade)
 i_tp2      = input.price(4453.8, "الهدف الثاني (TP2)", group=grp_trade)
 i_tp3      = input.price(4440.9, "الهدف الثالث (TP3)", group=grp_trade)
 
+grp_risk = "إدارة رأس المال (Risk Management)"
+i_account    = input.float(10000, "حجم الحساب ($)", group=grp_risk)
+i_riskPct    = input.float(1.0, "نسبة المخاطرة (%)", group=grp_risk, step=0.1)
+
 grp_ui = "واجهة المستخدم (UI)"
-i_riskAmt    = input.float(-15.98, "مبلغ المخاطرة بالدولار", group=grp_ui)
 i_confidence = input.int(48, "نسبة الثقة %", group=grp_ui)
 i_setup      = input.string("C", "نوع الإعداد", group=grp_ui)
 
@@ -27,18 +30,23 @@ color_bg = color.new(#0d1017, 10)
 color_text = #d1d4dc
 
 // ==========================================
-// 2. DYNAMIC CALCULATIONS (RR & VWAP)
+// 2. DYNAMIC CALCULATIONS (RR & LOT SIZE)
 // ==========================================
-// Calculate Risk Reward automatically
+entryMid = (i_entryHigh + i_entryLow) / 2
+sl_dist = math.abs(i_sl - entryMid)
+
 calcRR(target) =>
-    entryMid = (i_entryHigh + i_entryLow) / 2
-    risk = math.abs(i_sl - entryMid)
     reward = math.abs(target - entryMid)
-    risk == 0 ? 0 : (reward / risk)
+    sl_dist == 0 ? 0 : (reward / sl_dist)
 
 rr1 = calcRR(i_tp1)
 rr2 = calcRR(i_tp2)
 rr3 = calcRR(i_tp3)
+
+// Risk & Lot Size Calculator (Based on Standard Gold Contract 100 oz)
+riskAmount = i_account * (i_riskPct / 100)
+// For XAUUSD, 1 point ($1) move with 1 Standard Lot = $100.
+lot_size = sl_dist == 0 ? 0 : (riskAmount / (sl_dist * 100))
 
 // Daily VWAP (Dynamic indicator on chart)
 var float vwap_d = na
@@ -47,59 +55,54 @@ vwap_d := ta.vwap(hlc3)
 // ==========================================
 // 3. DRAWING LINES AND BOXES
 // ==========================================
-// Draw only on the last bar to keep the chart clean
 if barstate.islast and i_active
     // Entry Zone Box
     box.new(left=bar_index - 50, top=i_entryHigh, right=bar_index + 20, bottom=i_entryLow, 
              border_color=color.new(color_entry, 50), border_width=1, 
              bgcolor=color.new(color_entry, 90), text="ENTRY", text_color=color.new(color_entry, 20), text_halign=text.align_right)
 
-    // Helper function to draw lines with labels on the right
     drawLineAndLabel(price, col, style, labelText) =>
         line.new(bar_index - 50, price, bar_index + 20, price, color=col, style=style, width=1)
         label.new(bar_index + 20, price, text=labelText, color=color.new(col, 80), textcolor=col, style=label.style_label_left, size=size.small)
 
-    // Draw SL
-    sl_text = "SL " + str.tostring(i_sl) + " (" + str.tostring(i_riskAmt) + "$)"
-    drawLineAndLabel(i_sl, color_sl, line.style_solid, sl_text)
-    
-    // Draw TPs
+    drawLineAndLabel(i_sl, color_sl, line.style_solid, "SL " + str.tostring(i_sl) + " (-" + str.tostring(riskAmount, "#.##") + "$)")
     drawLineAndLabel(i_tp1, color_tp, line.style_dashed, "TP1 " + str.tostring(i_tp1) + " (1:" + str.tostring(rr1, "#.##") + ")")
     drawLineAndLabel(i_tp2, color_tp, line.style_dashed, "TP2 " + str.tostring(i_tp2) + " (1:" + str.tostring(rr2, "#.##") + ")")
     drawLineAndLabel(i_tp3, color_tp, line.style_dashed, "TP3 " + str.tostring(i_tp3) + " (1:" + str.tostring(rr3, "#.##") + ")")
 
-    // Draw Dynamic VWAP
     if not na(vwap_d)
         drawLineAndLabel(vwap_d, color_entry, line.style_dashed, "VWAP-D " + str.tostring(vwap_d, "#.##"))
 
 // ==========================================
 // 4. GLASSMORPHIC DASHBOARD (TABLE)
 // ==========================================
-var table dashboard = table.new(position.bottom_left, 3, 7, border_width=1, border_color=color.new(color.white, 90), bgcolor=color_bg)
+var table dashboard = table.new(position.bottom_left, 3, 8, border_width=1, border_color=color.new(color.white, 90), bgcolor=color_bg)
 
 if barstate.islast and i_active
-    // Title
     table.cell(dashboard, 0, 0, "خطة الصفقة", text_color=color_entry, text_halign=text.align_left, text_size=size.small)
     table.cell(dashboard, 0, 1, "ENTRY", text_color=color.white, text_halign=text.align_left, text_size=size.small)
     table.cell(dashboard, 1, 1, str.tostring(i_entryLow) + " - " + str.tostring(i_entryHigh), text_color=color_text, text_halign=text.align_left, text_size=size.small)
 
     table.cell(dashboard, 0, 2, "STOP", text_color=color.white, text_halign=text.align_left, text_size=size.small)
-    table.cell(dashboard, 1, 2, str.tostring(i_sl) + " | RISK " + str.tostring(i_riskAmt) + "$", text_color=color_text, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 2, str.tostring(i_sl) + " | RISK -" + str.tostring(riskAmount, "#.##") + "$", text_color=color_text, text_halign=text.align_left, text_size=size.small)
 
-    table.cell(dashboard, 0, 3, "TP1", text_color=color.white, text_halign=text.align_left, text_size=size.small)
-    table.cell(dashboard, 1, 3, str.tostring(i_tp1) + " | 1:" + str.tostring(rr1, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 0, 3, "LOTS", text_color=color_entry, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 3, str.tostring(lot_size, "#.##") + " Lots (Calculated)", text_color=color_entry, text_halign=text.align_left, text_size=size.small)
 
-    table.cell(dashboard, 0, 4, "TP2", text_color=color.white, text_halign=text.align_left, text_size=size.small)
-    table.cell(dashboard, 1, 4, str.tostring(i_tp2) + " | 1:" + str.tostring(rr2, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 0, 4, "TP1", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 4, str.tostring(i_tp1) + " | 1:" + str.tostring(rr1, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
 
-    table.cell(dashboard, 0, 5, "TP3", text_color=color.white, text_halign=text.align_left, text_size=size.small)
-    table.cell(dashboard, 1, 5, str.tostring(i_tp3) + " | 1:" + str.tostring(rr3, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 0, 5, "TP2", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 5, str.tostring(i_tp2) + " | 1:" + str.tostring(rr2, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
 
-    table.cell(dashboard, 0, 6, "CONV", text_color=color.white, text_halign=text.align_left, text_size=size.small)
-    table.cell(dashboard, 1, 6, "████░░░░░ " + str.tostring(i_confidence) + "%", text_color=color_text, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 0, 6, "TP3", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 6, str.tostring(i_tp3) + " | 1:" + str.tostring(rr3, "#.##"), text_color=color_text, text_halign=text.align_left, text_size=size.small)
+
+    table.cell(dashboard, 0, 7, "CONV", text_color=color.white, text_halign=text.align_left, text_size=size.small)
+    table.cell(dashboard, 1, 7, "████░░░░░ " + str.tostring(i_confidence) + "%", text_color=color_text, text_halign=text.align_left, text_size=size.small)
 
 // ==========================================
-// 5. TOP CENTER BADGE (SIGNAL)
+// 5. TOP CENTER BADGE
 // ==========================================
 var table topCenter = table.new(position.top_center, 1, 2, bgcolor=color.new(color.black, 100))
 if barstate.islast and i_active
@@ -114,3 +117,12 @@ var table topLeft = table.new(position.top_left, 1, 3, bgcolor=color.new(color.b
 if barstate.islast
     table.cell(topLeft, 0, 0, syminfo.ticker + " " + timeframe.period, text_color=color.white, text_size=size.large, text_halign=text.align_left)
     table.cell(topLeft, 0, 1, "كابوس الذهب", text_color=color_entry, text_size=size.normal, text_halign=text.align_left)
+
+// ==========================================
+// 7. ALERTS (تنبيهات احترافية)
+// ==========================================
+alertcondition(close <= i_entryHigh and close >= i_entryLow, title="🚨 السعر في منطقة الدخول", message="تنبيه: الذهب وصل إلى منطقة الدخول المحددة!")
+alertcondition(i_type == "SELL" and close >= i_sl, title="⚠️ ضرب وقف الخسارة (SL)", message="تنبيه: تم ضرب وقف الخسارة لصفقة البيع!")
+alertcondition(i_type == "BUY"  and close <= i_sl, title="⚠️ ضرب وقف الخسارة (SL)", message="تنبيه: تم ضرب وقف الخسارة لصفقة الشراء!")
+alertcondition(i_type == "SELL" and close <= i_tp1, title="✅ تحقيق الهدف الأول (TP1)", message="تنبيه: مبروك، تم ضرب الهدف الأول!")
+alertcondition(i_type == "BUY"  and close >= i_tp1, title="✅ تحقيق الهدف الأول (TP1)", message="تنبيه: مبروك، تم ضرب الهدف الأول!")
