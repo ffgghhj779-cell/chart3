@@ -7,46 +7,36 @@ body {
     color: #d1d4dc;
     font-family: 'Inter', 'Cairo', sans-serif;
     overflow: hidden;
+    /* تحسينات الموبايل: منع السحب والتحديث */
+    overscroll-behavior-y: none;
+    touch-action: none;
 }
 
 .top-red-bar {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 4px;
-    background-color: #f23645;
-    z-index: 20;
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 4px; background-color: #f23645; z-index: 20;
 }
 
 .watermark-container {
-    position: absolute;
-    top: 50%; left: 50%;
+    position: absolute; top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 0;
-    pointer-events: none;
+    z-index: 0; pointer-events: none;
 }
 
 #tvchart {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    z-index: 1;
+    position: absolute; top: 0; left: 0;
+    width: 100vw; height: 100vh; z-index: 1;
 }
 
 /* Custom Coordinate Lines */
 .custom-lines-container {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    pointer-events: none;
-    z-index: 5;
-    overflow: hidden;
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none; z-index: 5; overflow: hidden;
 }
 .chart-line {
-    position: absolute;
-    left: 0; right: 65px; /* Stop exactly at the right scale */
-    display: flex;
-    align-items: center;
-    transform: translateY(-50%);
-    transition: top 0.1s;
+    position: absolute; left: 0; right: 65px;
+    display: flex; align-items: center;
+    transform: translateY(-50%); transition: top 0.1s;
 }
 .line-path { flex-grow: 1; height: 2px; }
 .dashed .line-path { border-bottom: 2px dashed; height: 0; }
@@ -59,14 +49,9 @@ body {
 .green-line.dashed .line-path { border-color: #089981; background: none; }
 
 .line-label {
-    padding: 3px 6px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-family: 'Inter', monospace;
-    font-weight: 700;
-    margin-left: 5px;
-    color: white;
-    letter-spacing: 0.5px;
+    padding: 3px 6px; border-radius: 4px;
+    font-size: 11px; font-family: 'Inter', monospace; font-weight: 700;
+    margin-left: 5px; color: white; letter-spacing: 0.5px;
 }
 .red-label { background-color: #f23645; border: 1px solid #f23645; }
 .gold-label { background-color: rgba(255, 170, 0, 0.15); color: #ffaa00; border: 1px solid #ffaa00; }
@@ -85,8 +70,7 @@ body {
 .date-info { font-size: 10px; color: #787b86; margin-top: 5px; }
 
 .top-center {
-    top: 30px; left: 50%;
-    transform: translateX(-50%);
+    top: 30px; left: 50%; transform: translateX(-50%);
     display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
 @keyframes pulseGlow {
@@ -114,20 +98,12 @@ body {
 }
 
 .bottom-left { 
-    bottom: 40px; left: 30px; 
-    background: #0d1017;
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 8px; 
-    padding: 12px 16px;
+    bottom: 40px; left: 30px; background: #0d1017;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px 16px;
 }
 .plan-title { color: #ffaa00; font-size: 12px; font-weight: 700; margin-bottom: 6px; position: relative; }
 .fvg-text { position: absolute; bottom: -16px; left: 0; color: #089981; font-size: 9px; }
-.plan-table {
-    background: transparent;
-    border: none;
-    padding: 0;
-    border-spacing: 0;
-}
+.plan-table { background: transparent; border: none; padding: 0; border-spacing: 0; }
 .plan-table td { padding: 2px 10px 2px 0; font-size: 12px; color: #d1d4dc; }
 .col-label { font-weight: 700; color: #ffffff; padding-right: 15px !important; }
 .col-value { font-weight: 400; font-family: monospace; }
@@ -137,7 +113,30 @@ body {
 
 .bottom-right { bottom: 20px; right: 90px; color: rgba(255,255,255,0.15); font-size: 10px; }
 
+/* 📱 MOBILE OPTIMIZATIONS (PREMIUM TIER) 📱 */
 @media (max-width: 768px) {
-    .plan-table { transform: scale(0.8); transform-origin: bottom left; }
-    .c-badge { display: none; }
+    .watermark-container svg { width: 250px; height: 250px; }
+    
+    .top-left { top: 15px; left: 15px; }
+    .ticker { font-size: 18px; }
+    .timeframe { font-size: 14px; }
+    .strategy-name { font-size: 12px; margin-top: 2px; }
+    .date-info { font-size: 9px; }
+
+    .top-center { top: 15px; }
+    .sell-badge { font-size: 13px; padding: 4px 12px; }
+    .setup-info { font-size: 9px; padding: 2px 6px; }
+
+    .top-right { display: none; } /* Hide C badge to save space */
+    .bottom-right { display: none; } /* Hide GN Lab text */
+
+    .bottom-left { bottom: 15px; left: 10px; padding: 8px 12px; border-radius: 6px; }
+    .plan-title { font-size: 11px; margin-bottom: 4px; }
+    .fvg-text { font-size: 8px; bottom: -12px; }
+    .plan-table td { padding: 2px 6px 2px 0; font-size: 10px; }
+    .col-label { padding-right: 8px !important; }
+
+    .chart-line { right: 55px; } /* Mobile right scale is narrower */
+    .zone { right: 55px; }
+    .line-label { font-size: 9px; padding: 2px 4px; letter-spacing: 0; }
 }

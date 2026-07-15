@@ -1,4 +1,6 @@
 try {
+    const isMobile = window.innerWidth <= 768;
+
     const chartProperties = {
         width: window.innerWidth,
         height: window.innerHeight,
@@ -23,8 +25,8 @@ try {
         timeScale: {
             borderColor: 'rgba(255, 255, 255, 0.05)',
             timeVisible: true,
-            rightOffset: 35,
-            barSpacing: 6,
+            rightOffset: isMobile ? 12 : 35,
+            barSpacing: isMobile ? 5 : 6,
         },
         handleScroll: false,
         handleScale: false,
@@ -80,7 +82,6 @@ try {
         })
     });
 
-    // We only create the current price line on the axis so it shows the blue box there
     candleSeries.createPriceLine({
         price: 4506.05,
         color: '#2962FF',
@@ -98,7 +99,8 @@ try {
             'line-entry-low': 4506.7,
             'line-tp1': 4473.6,
             'line-tp2': 4453.8,
-            'line-tp3': 4440.9
+            'line-tp3': 4440.9,
+            'line-brk1': 4540
         };
         
         for (const [id, price] of Object.entries(levels)) {
@@ -121,6 +123,14 @@ try {
 
     window.addEventListener('resize', () => {
         chart.resize(window.innerWidth, window.innerHeight);
+        
+        // Dynamically adjust scale padding on mobile rotation
+        const newIsMobile = window.innerWidth <= 768;
+        chart.timeScale().applyOptions({
+            rightOffset: newIsMobile ? 12 : 35,
+            barSpacing: newIsMobile ? 5 : 6,
+        });
+        
         syncOverlays();
     });
 
