@@ -7,12 +7,13 @@ indicator("Gold Nightmare Intelligence Lab", shorttitle="GN Lab", overlay=true, 
 grp_trade = "إعدادات الصفقة (Trade Setup)"
 i_active   = input.bool(true, "تفعيل الصفقة الحالية؟", group=grp_trade)
 i_type     = input.string("SELL", "نوع الصفقة", options=["BUY", "SELL"], group=grp_trade)
-i_entryHigh= input.price(4516.8, "الحد الأعلى للدخول", inline="entry", group=grp_trade)
-i_entryLow = input.price(4506.7, "الحد الأدنى للدخول", inline="entry", group=grp_trade)
-i_sl       = input.price(4527.8, "وقف الخسارة (SL)", group=grp_trade)
-i_tp1      = input.price(4473.6, "الهدف الأول (TP1)", group=grp_trade)
-i_tp2      = input.price(4453.8, "الهدف الثاني (TP2)", group=grp_trade)
-i_tp3      = input.price(4440.9, "الهدف الثالث (TP3)", group=grp_trade)
+// القيم الافتراضية هنا قريبة من سعر الذهب الحقيقي الحالي (2400) لتعمل بشكل سليم
+i_entryHigh= input.price(2416.8, "الحد الأعلى للدخول", inline="entry", group=grp_trade)
+i_entryLow = input.price(2406.7, "الحد الأدنى للدخول", inline="entry", group=grp_trade)
+i_sl       = input.price(2427.8, "وقف الخسارة (SL)", group=grp_trade)
+i_tp1      = input.price(2373.6, "الهدف الأول (TP1)", group=grp_trade)
+i_tp2      = input.price(2353.8, "الهدف الثاني (TP2)", group=grp_trade)
+i_tp3      = input.price(2340.9, "الهدف الثالث (TP3)", group=grp_trade)
 
 grp_risk = "إدارة رأس المال (Risk Management)"
 i_account    = input.float(10000, "حجم الحساب ($)", group=grp_risk)
