@@ -1,11 +1,12 @@
 // ════════════════════════════════════════════════════
 // Gold Nightmare Intelligence Lab – Premium Live Chart
-// Data: Stooq.com via allorigins proxy (no API key)
+// Data Source: CoinGecko API (CORS enabled, free, no key)
+// XAUT = Tether Gold ≈ XAUUSD price (within 0.1%)
 // ════════════════════════════════════════════════════
 
 const isMobile = window.innerWidth <= 768;
 
-// ── Chart Setup ──
+// ── Chart ──
 const chart = LightweightCharts.createChart(document.getElementById('tvchart'), {
     width: window.innerWidth,
     height: window.innerHeight,
@@ -41,25 +42,24 @@ const candleSeries = chart.addCandlestickSeries({
 // ── Helpers ──
 const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const $ = id => document.getElementById(id);
-const calcRR = (entry, sl, tp) => {
-    const risk = Math.abs(sl - entry);
-    const reward = Math.abs(tp - entry);
-    return risk === 0 ? 0 : (reward / risk).toFixed(2);
+const calcRR = (entryH, sl, tp) => {
+    const risk = Math.abs(sl - entryH);
+    const rwd  = Math.abs(tp - entryH);
+    return risk === 0 ? '0' : (rwd / risk).toFixed(2);
 };
 
-// ── Trade levels (built around current price) ──
+// ── Levels ──
 let LEVELS = {};
 function buildLevels(price) {
     const sl     = +(price + 11.0).toFixed(2);
-    const entryH = +(price + 6.0).toFixed(2);
-    const entryL = +(price - 4.0).toFixed(2);
-    const entryMid = +((entryH + entryL) / 2).toFixed(2);
+    const entryH = +(price +  6.0).toFixed(2);
+    const entryL = +(price -  4.0).toFixed(2);
     const tp1    = +(price - 23.0).toFixed(2);
     const tp2    = +(price - 43.0).toFixed(2);
     const tp3    = +(price - 56.0).toFixed(2);
-    const vwap   = +(price + 4.4).toFixed(2);
-    const risk   = +((sl - entryMid) * 10).toFixed(2);
-    LEVELS = { sl, entryH, entryL, entryMid, tp1, tp2, tp3, vwap, risk };
+    const vwap   = +(price +  4.4).toFixed(2);
+    const risk   = +(Math.abs(sl - ((entryH + entryL) / 2)) * 10).toFixed(2);
+    LEVELS = { sl, entryH, entryL, tp1, tp2, tp3, vwap, risk };
     updateDashboard();
     updateLineLabels();
 }
@@ -67,7 +67,7 @@ function buildLevels(price) {
 function updateDashboard() {
     const { sl, entryH, entryL, tp1, tp2, tp3, risk } = LEVELS;
     $('d-entry').textContent = `${fmt(entryL)} – ${fmt(entryH)}`;
-    $('d-stop').textContent  = `${fmt(sl)}  |  RISK -${fmt(Math.abs(risk))}$`;
+    $('d-stop').textContent  = `${fmt(sl)}  |  RISK -${fmt(risk)}$`;
     $('d-tp1').textContent   = `${fmt(tp1)}  |  1:${calcRR(entryH, sl, tp1)}`;
     $('d-tp2').textContent   = `${fmt(tp2)}  |  1:${calcRR(entryH, sl, tp2)}`;
     $('d-tp3').textContent   = `${fmt(tp3)}  |  1:${calcRR(entryH, sl, tp3)}`;
@@ -75,7 +75,7 @@ function updateDashboard() {
 
 function updateLineLabels() {
     const { sl, entryH, entryL, tp1, tp2, tp3, vwap, risk } = LEVELS;
-    $('label-sl').textContent    = `SL ${fmt(sl)}  (-${fmt(Math.abs(risk))}$)`;
+    $('label-sl').textContent    = `SL ${fmt(sl)}  (-${fmt(risk)}$)`;
     $('label-vwap').textContent  = `VWAP-D ${fmt(vwap)}`;
     $('label-entry').textContent = `ENTRY ${fmt(entryL)}–${fmt(entryH)}`;
     $('label-tp1').textContent   = `TP1 ${fmt(tp1)}  1:${calcRR(entryH, sl, tp1)}`;
@@ -87,13 +87,9 @@ function updateLineLabels() {
 function syncOverlays() {
     if (!LEVELS.sl) return;
     const pts = {
-        'line-sl':         LEVELS.sl,
-        'line-vwap':       LEVELS.vwap,
-        'line-entry-high': LEVELS.entryH,
-        'line-entry-low':  LEVELS.entryL,
-        'line-tp1':        LEVELS.tp1,
-        'line-tp2':        LEVELS.tp2,
-        'line-tp3':        LEVELS.tp3,
+        'line-sl': LEVELS.sl, 'line-vwap': LEVELS.vwap,
+        'line-entry-high': LEVELS.entryH, 'line-entry-low': LEVELS.entryL,
+        'line-tp1': LEVELS.tp1, 'line-tp2': LEVELS.tp2, 'line-tp3': LEVELS.tp3,
     };
     for (const [id, price] of Object.entries(pts)) {
         const y = candleSeries.priceToCoordinate(price);
@@ -124,100 +120,87 @@ function updatePriceBar(price) {
     prevClose = price;
 }
 
-// ── Parse Stooq CSV ──
-function parseStooqCSV(csv) {
-    const lines  = csv.trim().split('\n');
-    const header = lines[0].toLowerCase();
-    const hasTime = header.includes('time');
-    const candles = [];
-
-    for (let i = 1; i < lines.length; i++) {
-        const cols = lines[i].trim().split(',');
-        if (cols.length < 5) continue;
-        let time, open, high, low, close;
-        if (hasTime) {
-            const [y, m, d] = cols[0].split('-');
-            const [hh, mm]  = cols[1].split(':');
-            time  = Math.floor(new Date(`${y}-${m}-${d}T${hh}:${mm}:00Z`).getTime() / 1000);
-            open  = parseFloat(cols[2]); high = parseFloat(cols[3]);
-            low   = parseFloat(cols[4]); close = parseFloat(cols[5]);
-        } else {
-            const [y, m, d] = cols[0].split('-');
-            time  = Math.floor(new Date(`${y}-${m}-${d}T12:00:00Z`).getTime() / 1000);
-            open  = parseFloat(cols[1]); high = parseFloat(cols[2]);
-            low   = parseFloat(cols[3]); close = parseFloat(cols[4]);
-        }
-        if (!isNaN(time) && !isNaN(open) && !isNaN(close) && open > 0)
-            candles.push({ time, open, high, low, close });
-    }
+// ── CoinGecko: OHLC data for XAUT (Tether Gold) ──
+// CoinGecko is CORS-enabled, free, no API key needed.
+// XAUT price ≈ XAUUSD within 0.1% (backed 1:1 by gold)
+async function fetchCoinGeckoOHLC(days) {
+    const url = `https://api.coingecko.com/api/v3/coins/tether-gold/ohlc?vs_currency=usd&days=${days}`;
+    const res = await fetch(url, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
+    const raw = await res.json(); // [[timestamp_ms, open, high, low, close], ...]
+    if (!Array.isArray(raw) || raw.length === 0) throw new Error('Empty OHLC response');
+    const candles = raw.map(([ts, o, h, l, c]) => ({
+        time: Math.floor(ts / 1000),
+        open: +o.toFixed(2), high: +h.toFixed(2),
+        low:  +l.toFixed(2), close: +c.toFixed(2),
+    }));
     candles.sort((a, b) => a.time - b.time);
+    // Deduplicate
     const seen = new Set();
     return candles.filter(c => { if (seen.has(c.time)) return false; seen.add(c.time); return true; });
 }
 
-// ── Fetch Live Data ──
-async function fetchData() {
-    const stooqUrl = 'https://stooq.com/q/d/l/?s=xauusd&i=h';
-
-    // Try multiple CORS proxies
-    const proxies = [
-        `https://api.allorigins.win/raw?url=${encodeURIComponent(stooqUrl)}`,
-        `https://corsproxy.io/?${encodeURIComponent(stooqUrl)}`,
-        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(stooqUrl)}`,
-    ];
-
-    for (const proxyUrl of proxies) {
-        try {
-            const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
-            if (!res.ok) continue;
-            const text = await res.text();
-            if (!text || text.length < 50 || text.startsWith('<')) continue;
-            const candles = parseStooqCSV(text);
-            if (candles.length >= 5) return candles;
-        } catch (_) { /* try next proxy */ }
-    }
-    throw new Error('All proxies failed');
+// ── Also fetch current live price from CoinGecko ──
+async function fetchCurrentPrice() {
+    const url = 'https://api.coingecko.com/api/v3/simple/price?ids=tether-gold&vs_currencies=usd';
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) throw new Error(`Price fetch HTTP ${res.status}`);
+    const json = await res.json();
+    return json['tether-gold']?.usd ?? null;
 }
 
-// ── Init ──
+// ── Main Init ──
 async function init() {
     const loading = $('loading-screen');
     try {
-        const candles = await fetchData();
-        candleSeries.setData(candles);
-        const last = candles[candles.length - 1];
-        updatePriceBar(last.close);
-        buildLevels(last.close);
+        // Fetch 14 days of OHLC (gives ~4H candles) + current price
+        const [candles, currentPrice] = await Promise.all([
+            fetchCoinGeckoOHLC(14),
+            fetchCurrentPrice(),
+        ]);
 
-        const d = new Date(last.time * 1000);
-        $('live-date').textContent = d.toLocaleString('en-GB', {
+        candleSeries.setData(candles);
+
+        const lastPrice = currentPrice ?? candles[candles.length - 1].close;
+        updatePriceBar(lastPrice);
+        buildLevels(lastPrice);
+
+        const now = new Date();
+        $('live-date').textContent = now.toLocaleString('en-GB', {
             year: 'numeric', month: '2-digit', day: '2-digit',
-            hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Amman'
-        }) + ' Amman';
+            hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Amman',
+        }) + ' Amman · Live';
 
         chart.timeScale().scrollToRealTime();
 
-        // Auto-refresh every 60s
+        // Refresh every 4 minutes (CoinGecko free rate limit: 10-30 req/min)
         setInterval(async () => {
             try {
-                const fresh = await fetchData();
+                const [fresh, livePrice] = await Promise.all([
+                    fetchCoinGeckoOHLC(14),
+                    fetchCurrentPrice(),
+                ]);
                 if (fresh.length) {
                     candleSeries.setData(fresh);
-                    const l = fresh[fresh.length - 1];
-                    updatePriceBar(l.close);
-                    buildLevels(l.close);
+                    const p = livePrice ?? fresh[fresh.length - 1].close;
+                    updatePriceBar(p);
+                    buildLevels(p);
                     chart.timeScale().scrollToRealTime();
                 }
             } catch (_) {}
-        }, 60000);
+        }, 4 * 60 * 1000);
 
     } catch (e) {
-        console.warn('Live data failed, using last known price:', e.message);
-        $('live-price-val').textContent = 'Loading failed';
-        $('live-date').textContent = 'Check connection';
-        buildLevels(2400); // last-known fallback
+        console.error('Init error:', e.message);
+        $('live-price-val').textContent = 'Error';
+        $('live-date').textContent = e.message;
+        buildLevels(2400);
+    } finally {
+        loading.classList.add('hidden');
     }
-    loading.classList.add('hidden');
 }
 
 // ── Resize ──
