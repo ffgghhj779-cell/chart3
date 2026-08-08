@@ -6,16 +6,12 @@ html, body {
     background-color: #0d1017;
     color: #d1d4dc;
     font-family: 'Inter', 'Cairo', sans-serif;
-    overflow: hidden;
-    height: 100%; width: 100%;
-    /* iOS Safari: prevent elastic bounce while allowing chart interaction */
+    overflow: hidden; height: 100%; width: 100%;
     overscroll-behavior: none;
-    -webkit-overflow-scrolling: touch;
-    /* Prevent text selection on drag */
     user-select: none; -webkit-user-select: none;
 }
 
-/* ── Loading Screen ── */
+/* ── Loading ── */
 #loading-screen {
     position: fixed; inset: 0; z-index: 9999;
     background: #0d1017;
@@ -25,31 +21,15 @@ html, body {
 #loading-screen.hidden { opacity: 0; pointer-events: none; }
 .loading-inner { display: flex; flex-direction: column; align-items: center; gap: 16px; }
 .loading-text { color: #d1d4dc; font-size: 14px; font-weight: 500; letter-spacing: 1px; }
-.loading-sub { color: #ffaa00; font-size: 11px; letter-spacing: 2px; }
+.loading-sub  { color: #ffaa00; font-size: 11px; letter-spacing: 2px; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 .dots { animation: blink 1.2s infinite; }
 
 /* ── Top Red Bar ── */
 .top-red-bar {
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #f23645, #ff6b6b, #f23645);
-    z-index: 20;
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, #f23645, #ff6b6b, #f23645); z-index: 30;
 }
-
-/* ── Live Price Bar ── */
-#live-price-bar {
-    position: absolute; top: 3px; left: 50%; transform: translateX(-50%);
-    z-index: 20; display: flex; gap: 8px; align-items: center;
-    background: rgba(13,16,23,0.9); backdrop-filter: blur(10px);
-    padding: 5px 16px; border-radius: 0 0 10px 10px;
-    border: 1px solid rgba(255,255,255,0.07); border-top: none;
-    white-space: nowrap;
-}
-#live-price-val { font-size: 13px; font-weight: 700; color: #ffffff; letter-spacing: 0.5px; }
-.price-change { font-size: 11px; font-weight: 600; }
-.price-change.up { color: #089981; }
-.price-change.down { color: #f23645; }
 
 /* ── Watermark ── */
 .watermark-container {
@@ -62,7 +42,6 @@ html, body {
 #tvchart {
     position: absolute; top: 0; left: 0;
     width: 100vw; height: 100vh; z-index: 1;
-    /* Critical: allow touch events to pass to Lightweight Charts */
     touch-action: none;
 }
 
@@ -75,11 +54,11 @@ html, body {
     position: absolute; left: 0; right: 58px;
     display: flex; align-items: center;
     transform: translateY(-50%);
-    will-change: top; /* GPU acceleration for 60fps */
+    will-change: top;
 }
 .line-path { flex-grow: 1; height: 1.5px; }
 .dashed .line-path { border-bottom: 1.5px dashed; height: 0; }
-.red-line .line-path { background-color: #f23645; }
+.red-line  .line-path { background-color: #f23645; }
 .red-line.dashed .line-path { border-color: #f23645; background: none; }
 .gold-line .line-path { background-color: #ffaa00; height: 1px; opacity: 0.85; }
 .gold-line.dashed .line-path { border-color: #ffaa00; background: none; border-bottom: 1px dashed; height: 0; }
@@ -87,16 +66,15 @@ html, body {
 .green-line.dashed .line-path { border-color: #089981; background: none; }
 
 .line-label {
-    padding: 2px 7px; border-radius: 3px;
-    font-size: 11px; font-family: 'Inter', monospace; font-weight: 700;
-    margin-left: 4px; color: white; letter-spacing: 0.2px; white-space: nowrap;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    padding: 2px 6px; border-radius: 3px;
+    font-size: 10.5px; font-family: 'Inter', monospace; font-weight: 700;
+    margin-left: 4px; color: white; white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
-.red-label { background-color: #f23645; }
-.gold-label { background-color: rgba(255,170,0,0.18); color: #ffaa00; border: 1px solid rgba(255,170,0,0.55); }
-.green-label { background-color: rgba(8,153,129,0.18); color: #089981; border: 1px solid rgba(8,153,129,0.55); }
+.red-label   { background-color: #f23645; }
+.gold-label  { background: rgba(255,170,0,0.18); color: #ffaa00; border: 1px solid rgba(255,170,0,0.55); }
+.green-label { background: rgba(8,153,129,0.18); color: #089981; border: 1px solid rgba(8,153,129,0.55); }
 
-/* ── Entry Zone ── */
 .zone { position: absolute; left: 0; right: 58px; will-change: top, height; }
 .gold-zone {
     background: linear-gradient(180deg, rgba(255,170,0,0.09), rgba(255,170,0,0.04));
@@ -104,20 +82,42 @@ html, body {
     border-bottom: 1px solid rgba(255,170,0,0.45);
 }
 
-/* ── Overlays ── */
+/* ── Shared Overlay ── */
 .overlay { position: absolute; z-index: 10; pointer-events: none; }
 
-/* Desktop */
+/* ══════════════════════════
+   DESKTOP HEADER (>768px)
+   ══════════════════════════ */
+#header-desktop { top: 0; left: 0; right: 0; height: 0; }
+#header-mobile  { display: none; }
+
+/* Live Price Bar */
+#live-price-bar {
+    position: absolute; top: 3px; left: 50%; transform: translateX(-50%);
+    z-index: 20; display: flex; gap: 8px; align-items: center;
+    background: rgba(13,16,23,0.9); backdrop-filter: blur(10px);
+    padding: 5px 16px; border-radius: 0 0 10px 10px;
+    border: 1px solid rgba(255,255,255,0.07); border-top: none;
+    white-space: nowrap;
+}
+#live-price-val { font-size: 13px; font-weight: 700; color: #fff; }
+.price-change { font-size: 11px; font-weight: 600; }
+.price-change.up   { color: #089981; }
+.price-change.down { color: #f23645; }
+
 .top-left { top: 28px; left: 16px; }
-.ticker { font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: 0.5px; }
+.ticker { font-size: 22px; font-weight: 800; color: #fff; }
 .timeframe { font-size: 16px; color: #d1d4dc; margin-left: 8px; font-weight: 600; }
 .strategy-name { font-size: 13px; color: #ffaa00; font-weight: 700; margin-top: 3px; }
 .date-info { font-size: 10px; color: #5d606b; margin-top: 3px; }
 
 .top-center {
-    top: 28px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: 28px; left: 50%; transform: translateX(-50%);
     display: flex; flex-direction: column; align-items: center; gap: 5px;
 }
+.top-right { position: absolute; top: 28px; right: 75px; }
+
+/* ── SELL Badge ── */
 @keyframes pulseGlow {
     0%,100% { box-shadow: 0 0 8px rgba(242,54,69,0.4); }
     50%      { box-shadow: 0 0 24px rgba(242,54,69,0.95); }
@@ -132,18 +132,17 @@ html, body {
     font-size: 10px; color: #a0a3ab; background: rgba(0,0,0,0.5);
     padding: 2px 10px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.06);
 }
-
-.top-right { top: 28px; right: 75px; }
 .c-badge {
-    border: 1px solid rgba(255,255,255,0.25); color: #ffffff;
+    border: 1px solid rgba(255,255,255,0.25); color: #fff;
     border-radius: 5px; width: 30px; height: 30px;
     display: flex; justify-content: center; align-items: center;
     font-size: 17px; font-weight: bold; background: rgba(255,255,255,0.03);
 }
 
+/* ── Dashboard ── */
 .bottom-left {
     bottom: 32px; left: 14px;
-    background: rgba(13,16,23,0.92);
+    background: rgba(13,16,23,0.93);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     border: 1px solid rgba(255,255,255,0.09);
     border-radius: 10px; padding: 10px 14px;
@@ -152,50 +151,78 @@ html, body {
 .fvg-text { position: absolute; bottom: -13px; right: 0; color: #089981; font-size: 9px; }
 .plan-table { border-spacing: 0; }
 .plan-table td { padding: 2px 8px 2px 0; font-size: 11px; color: #d1d4dc; }
-.col-label { font-weight: 700; color: #ffffff; padding-right: 12px !important; min-width: 44px; }
-.col-value { font-weight: 400; font-family: 'Inter', monospace; }
-.divider { color: #5d606b; margin: 0 3px; }
+.col-label { font-weight: 700; color: #fff; padding-right: 12px !important; min-width: 40px; }
+.col-value { font-family: 'Inter', monospace; }
 .progress-bar-container {
-    display: inline-block; width: 42px; height: 4px;
+    display: inline-block; width: 40px; height: 4px;
     background: #363a45; border-radius: 2px; margin-right: 5px; vertical-align: middle;
 }
-.progress-bar { height: 100%; background: #ffffff; border-radius: 2px; }
+.progress-bar { height: 100%; background: #fff; border-radius: 2px; }
 
 .bottom-right { bottom: 16px; right: 75px; color: rgba(255,255,255,0.1); font-size: 9px; letter-spacing: 1px; }
 
-/* ════════════════════════════════════
-   📱 MOBILE – PORTRAIT (≤ 768px)
-   ════════════════════════════════════ */
+/* ══════════════════════════
+   📱 MOBILE (≤ 768px)
+   ══════════════════════════ */
 @media (max-width: 768px) {
 
-    /* Safe area for notch/home bar (iPhone) */
-    .top-left     { top: max(14px, env(safe-area-inset-top, 14px)); left: 14px; }
-    .top-right    { display: none; }
-    .bottom-right { display: none; }
+    /* Hide desktop header, show mobile header */
+    #header-desktop { display: none; }
+    #live-price-bar { display: none; }
+    .top-right, .bottom-right { display: none; }
 
-    /* Watermark */
-    .watermark-container svg { width: 200px; height: 200px; }
+    #header-mobile {
+        display: block;
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        z-index: 20;
+        padding-top: max(3px, env(safe-area-inset-top, 3px));
+        background: rgba(13,16,23,0.95);
+        backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
 
-    /* Ticker */
-    .ticker    { font-size: 16px; letter-spacing: 0; }
-    .timeframe { font-size: 12px; margin-left: 6px; }
-    .strategy-name { font-size: 11px; margin-top: 2px; }
-    .date-info { font-size: 9px; margin-top: 2px; }
+    /* Row 1: Symbol left, Price right */
+    .mob-row1 {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 8px 14px 4px;
+    }
+    .mob-ticker { display: flex; align-items: baseline; gap: 6px; }
+    .mob-symbol { font-size: 16px; font-weight: 800; color: #fff; }
+    .mob-tf     { font-size: 11px; color: #d1d4dc; font-weight: 600;
+                  background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 3px; }
+    .mob-name   { font-size: 11px; color: #ffaa00; font-weight: 700; direction: rtl; }
+    .mob-price-block { text-align: right; }
+    .mob-price-val { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: 0.5px; }
+    .mob-price-chg { font-size: 10px; font-weight: 600; margin-top: 1px; }
+    .mob-price-chg.up   { color: #089981; }
+    .mob-price-chg.down { color: #f23645; }
 
-    /* Live Price Bar */
-    #live-price-bar { padding: 4px 12px; gap: 6px; border-radius: 0 0 8px 8px; }
-    #live-price-val { font-size: 12px; }
-    .price-change   { font-size: 10px; }
+    /* Row 2: Date left, Badge right */
+    .mob-row2 {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 2px 14px 8px;
+    }
+    .mob-date { font-size: 9px; color: #5d606b; }
+    .mob-badge-wrap { display: flex; align-items: center; gap: 8px; }
+    .mob-badge-wrap .sell-badge {
+        font-size: 11px; padding: 3px 12px; letter-spacing: 1px;
+        border-radius: 4px;
+    }
+    .mob-conf { font-size: 9px; color: #a0a3ab;
+                background: rgba(0,0,0,0.5); padding: 2px 7px;
+                border-radius: 3px; border: 1px solid rgba(255,255,255,0.06);
+                direction: rtl; }
 
-    /* SELL Badge */
-    .top-center { top: max(14px, env(safe-area-inset-top, 14px)); gap: 4px; }
-    .sell-badge { font-size: 12px; padding: 4px 14px; border-radius: 4px; letter-spacing: 1px; }
-    .setup-info { font-size: 9px; padding: 2px 8px; }
+    /* Push chart down below mobile header (~70px) */
+    #tvchart { top: 70px; height: calc(100vh - 70px); }
+    .custom-lines-container { top: 70px; }
+    .watermark-container { top: calc(50% + 35px); }
 
     /* Chart lines */
     .chart-line { right: 52px; }
     .zone       { right: 52px; }
-    .line-label { font-size: 9.5px; padding: 1.5px 5px; letter-spacing: 0; }
+    .line-label { font-size: 9px; padding: 1.5px 5px; }
     .line-path  { height: 1px; }
     .dashed .line-path { border-bottom-width: 1px; }
 
@@ -205,41 +232,33 @@ html, body {
         left: 10px;
         padding: 8px 12px;
         border-radius: 8px;
-        max-width: 200px;
     }
-    .plan-title { font-size: 10px; margin-bottom: 4px; }
-    .fvg-text   { font-size: 8px; bottom: -11px; }
+    .plan-title  { font-size: 10px; margin-bottom: 4px; }
+    .fvg-text    { font-size: 8px; bottom: -11px; }
     .plan-table td  { font-size: 10px; padding: 1.5px 5px 1.5px 0; }
-    .col-label  { min-width: 36px; padding-right: 8px !important; }
-    .progress-bar-container { width: 36px; height: 3px; margin-right: 4px; }
+    .col-label   { min-width: 34px; padding-right: 8px !important; }
+    .progress-bar-container { width: 34px; height: 3px; margin-right: 4px; }
 }
 
-/* ════════════════════════════════════
-   📱 MOBILE – LANDSCAPE (short height)
-   ════════════════════════════════════ */
-@media (max-height: 500px) {
-    /* Hide dashboard in landscape to give chart full space */
+/* ── Landscape mobile ── */
+@media (max-width: 768px) and (max-height: 450px) {
+    #header-mobile { display: none; }
+    #tvchart { top: 3px; height: calc(100vh - 3px); }
+    .custom-lines-container { top: 3px; }
+    .watermark-container { top: 50%; }
     .bottom-left { display: none; }
-    .top-left    { top: 6px; left: 10px; }
-    .top-center  { top: 6px; }
-    .ticker      { font-size: 14px; }
-    .timeframe   { font-size: 11px; }
-    .strategy-name, .date-info { display: none; }
-    .sell-badge  { font-size: 11px; padding: 3px 10px; }
-    .setup-info  { display: none; }
-    #live-price-bar { padding: 3px 10px; }
-    #live-price-val { font-size: 11px; }
-    .price-change   { font-size: 9px; }
-    .line-label  { font-size: 8.5px; padding: 1px 4px; }
+    /* Show minimal overlay instead */
+    .bottom-right {
+        display: block !important;
+        bottom: 8px; right: 8px;
+        font-size: 8px; color: rgba(255,255,255,0.15);
+    }
 }
 
-/* ════════════════════════════════════
-   📱 VERY SMALL SCREENS (≤ 380px)
-   ════════════════════════════════════ */
-@media (max-width: 380px) {
-    .ticker { font-size: 14px; }
-    .sell-badge { font-size: 11px; padding: 3px 10px; }
-    .line-label { font-size: 8.5px; }
-    .plan-table td { font-size: 9.5px; }
-    .bottom-left { max-width: 175px; padding: 6px 10px; }
+/* ── Very small screens ── */
+@media (max-width: 360px) {
+    .mob-symbol { font-size: 14px; }
+    .mob-price-val { font-size: 13px; }
+    .mob-name { display: none; }
+    .mob-conf { display: none; }
 }

@@ -109,13 +109,25 @@ function syncOverlays() {
 // ── Live Price Bar ──
 let prevClose = null;
 function updatePriceBar(price) {
-    $('live-price-val').textContent = fmt(price);
+    const fmtPrice = fmt(price);
+    // Desktop
+    const dv = document.getElementById('live-price-val');
+    if (dv) dv.textContent = fmtPrice;
+    // Mobile
+    const mv = document.getElementById('mob-price-val');
+    if (mv) mv.textContent = fmtPrice;
+
     if (prevClose !== null) {
         const diff = +(price - prevClose).toFixed(2);
         const pct  = ((diff / prevClose) * 100).toFixed(2);
-        const ch   = $('live-price-change');
-        ch.textContent = `${diff >= 0 ? '+' : ''}${fmt(diff)} (${diff >= 0 ? '+' : ''}${pct}%)`;
-        ch.className   = 'price-change ' + (diff >= 0 ? 'up' : 'down');
+        const sign = diff >= 0 ? '+' : '';
+        const cls  = diff >= 0 ? 'up' : 'down';
+        const chgText = `${sign}${fmt(diff)} (${sign}${pct}%)`;
+
+        const dc = document.getElementById('live-price-change');
+        if (dc) { dc.textContent = chgText; dc.className = 'price-change ' + cls; }
+        const mc = document.getElementById('mob-price-chg');
+        if (mc) { mc.textContent = chgText; mc.className = 'mob-price-chg ' + cls; }
     }
     prevClose = price;
 }
@@ -168,11 +180,14 @@ async function init() {
         updatePriceBar(lastPrice);
         buildLevels(lastPrice);
 
-        const now = new Date();
-        $('live-date').textContent = now.toLocaleString('en-GB', {
+        const dateStr = now.toLocaleString('en-GB', {
             year: 'numeric', month: '2-digit', day: '2-digit',
             hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Amman',
         }) + ' Amman · Live';
+        const ld = document.getElementById('live-date');
+        if (ld) ld.textContent = dateStr;
+        const md = document.getElementById('mob-date');
+        if (md) md.textContent = dateStr;
 
         chart.timeScale().scrollToRealTime();
 

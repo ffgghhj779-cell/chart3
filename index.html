@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Gold Nightmare – XAUUSD Live</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
@@ -11,16 +11,16 @@
 
     <div class="top-red-bar"></div>
 
-    <!-- Loading Overlay -->
+    <!-- Loading -->
     <div id="loading-screen">
         <div class="loading-inner">
-            <svg viewBox="0 0 200 200" width="80" height="80" opacity="0.9">
+            <svg viewBox="0 0 200 200" width="72" height="72">
                 <polygon points="100,10 180,50 180,150 100,190 20,150 20,50" fill="none" stroke="#ffaa00" stroke-width="8"/>
-                <path d="M 50 85 L 65 50 L 100 75 L 135 50 L 150 85 Z" fill="#ffaa00" />
+                <path d="M 50 85 L 65 50 L 100 75 L 135 50 L 150 85 Z" fill="#ffaa00"/>
                 <text x="100" y="155" font-family="Arial" font-size="60" font-weight="900" fill="#ffaa00" text-anchor="middle">GN</text>
             </svg>
             <div class="loading-text">جاري تحميل البيانات الحية<span class="dots">...</span></div>
-            <div class="loading-sub">XAUUSD · H1 · Live</div>
+            <div class="loading-sub">XAUUSD · 4H · Live</div>
         </div>
     </div>
 
@@ -28,16 +28,16 @@
     <div class="watermark-container">
         <svg viewBox="0 0 200 200" width="400" height="400" opacity="0.04">
             <polygon points="100,10 180,50 180,150 100,190 20,150 20,50" fill="none" stroke="#ffaa00" stroke-width="8"/>
-            <path d="M 50 85 L 65 50 L 100 75 L 135 50 L 150 85 Z" fill="#ffaa00" />
+            <path d="M 50 85 L 65 50 L 100 75 L 135 50 L 150 85 Z" fill="#ffaa00"/>
             <text x="100" y="150" font-family="Arial" font-size="70" font-weight="900" fill="#ffaa00" text-anchor="middle" letter-spacing="4">GN</text>
         </svg>
     </div>
 
-    <!-- Chart Container -->
+    <!-- Chart -->
     <div id="tvchart"></div>
 
-    <!-- HTML Overlay Lines (positioned by JS) -->
-    <div class="custom-lines-container" id="custom-lines">
+    <!-- Overlay Lines -->
+    <div class="custom-lines-container">
         <div id="entry-zone" class="zone gold-zone"></div>
         <div class="chart-line red-line" id="line-sl">
             <div class="line-path"></div>
@@ -45,7 +45,7 @@
         </div>
         <div class="chart-line gold-line dashed" id="line-vwap">
             <div class="line-path"></div>
-            <div class="line-label gold-label" id="label-vwap">VWAP-D –</div>
+            <div class="line-label gold-label" id="label-vwap">VWAP –</div>
         </div>
         <div class="chart-line gold-line" id="line-entry-high">
             <div class="line-path"></div>
@@ -68,44 +68,65 @@
         </div>
     </div>
 
-    <!-- Live Price Ticker (top bar) -->
-    <div id="live-price-bar">
-        <span id="live-price-val">–</span>
-        <span id="live-price-change" class="price-change">–</span>
+    <!-- ══ DESKTOP Header ══ -->
+    <div id="header-desktop" class="overlay">
+        <!-- Price Bar -->
+        <div id="live-price-bar">
+            <span id="live-price-val">–</span>
+            <span id="live-price-change" class="price-change">–</span>
+        </div>
+        <!-- Top Left -->
+        <div class="top-left">
+            <div class="ticker">XAUUSD <span class="timeframe">4H</span></div>
+            <div class="strategy-name" style="direction:rtl;">كابوس الذهب</div>
+            <div class="date-info" id="live-date">–</div>
+        </div>
+        <!-- Top Center: Signal -->
+        <div class="top-center">
+            <div class="sell-badge" id="signal-badge">SELL</div>
+            <div class="setup-info" style="direction:rtl;" id="signal-sub">بيع · إعداد C · ثقة 48%</div>
+        </div>
+        <!-- Top Right -->
+        <div class="top-right">
+            <div class="c-badge">C</div>
+        </div>
     </div>
 
-    <!-- Top Left -->
-    <div class="overlay top-left">
-        <div class="ticker">XAUUSD <span class="timeframe">4H</span></div>
-        <div class="strategy-name" style="direction: rtl;">كابوس الذهب</div>
-        <div class="date-info" id="live-date">–</div>
+    <!-- ══ MOBILE Header (completely different layout) ══ -->
+    <div id="header-mobile">
+        <div class="mob-row1">
+            <div class="mob-ticker">
+                <span class="mob-symbol">XAUUSD</span>
+                <span class="mob-tf">4H</span>
+                <span class="mob-name">كابوس الذهب</span>
+            </div>
+            <div class="mob-price-block">
+                <div class="mob-price-val" id="mob-price-val">–</div>
+                <div class="mob-price-chg" id="mob-price-chg">–</div>
+            </div>
+        </div>
+        <div class="mob-row2">
+            <div class="mob-date" id="mob-date">–</div>
+            <div class="mob-badge-wrap">
+                <div class="sell-badge">SELL</div>
+                <div class="mob-conf">ثقة 48% · إعداد C</div>
+            </div>
+        </div>
     </div>
 
-    <!-- Top Center -->
-    <div class="overlay top-center">
-        <div class="sell-badge" id="signal-badge">SELL</div>
-        <div class="setup-info" style="direction: rtl;" id="signal-sub">بيع · إعداد C · ثقة 48%</div>
-    </div>
-
-    <!-- Top Right -->
-    <div class="overlay top-right">
-        <div class="c-badge">C</div>
-    </div>
-
-    <!-- Bottom Left Dashboard -->
+    <!-- Dashboard (shared) -->
     <div class="overlay bottom-left">
-        <div class="plan-title" style="direction: rtl;">خطة الصفقة <span class="fvg-text">FVG</span></div>
+        <div class="plan-title" style="direction:rtl;">خطة الصفقة <span class="fvg-text">FVG</span></div>
         <table class="plan-table">
             <tr><td class="col-label">ENTRY</td><td class="col-value" id="d-entry">–</td></tr>
-            <tr><td class="col-label">STOP</td><td class="col-value" id="d-stop">–</td></tr>
-            <tr><td class="col-label">TP1</td><td class="col-value" id="d-tp1">–</td></tr>
-            <tr><td class="col-label">TP2</td><td class="col-value" id="d-tp2">–</td></tr>
-            <tr><td class="col-label">TP3</td><td class="col-value" id="d-tp3">–</td></tr>
+            <tr><td class="col-label">STOP</td> <td class="col-value" id="d-stop">–</td></tr>
+            <tr><td class="col-label">TP1</td>  <td class="col-value" id="d-tp1">–</td></tr>
+            <tr><td class="col-label">TP2</td>  <td class="col-value" id="d-tp2">–</td></tr>
+            <tr><td class="col-label">TP3</td>  <td class="col-value" id="d-tp3">–</td></tr>
             <tr>
                 <td class="col-label">CONV</td>
                 <td class="col-value">
-                    <div class="progress-bar-container"><div class="progress-bar" style="width:48%;"></div></div>
-                    48%
+                    <div class="progress-bar-container"><div class="progress-bar" style="width:48%;"></div></div>48%
                 </td>
             </tr>
         </table>
