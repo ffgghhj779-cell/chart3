@@ -132,40 +132,34 @@ function updatePriceBar(price) {
     prevClose = price;
 }
 
-// ── Bitfinex API · tXAUUSD · 4H candles ──
-// Bitfinex has traded XAU/USD since 2017. Public API has CORS: *
-// Candle format (OCHLV, NOT OHLCV!): [ts_ms, open, close, high, low, vol]
-async function fetchBitfinex() {
-    const url = 'https://api-pub.bitfinex.com/v2/candles/trade:4h:tXAUUSD/hist?limit=200&sort=1';
-    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) throw new Error(`Bitfinex HTTP ${res.status}`);
-    const raw = await res.json();
-    if (!Array.isArray(raw) || raw.length === 0) throw new Error('Bitfinex: empty data');
-    return raw.map(d => ({
-        time:  Math.floor(d[0] / 1000),
-        open:  parseFloat(d[1]),
-        close: parseFloat(d[2]),
-        high:  parseFloat(d[3]),
-        low:   parseFloat(d[4]),
-    }));
+// ── Data via Vercel Serverless Function (/api/gold) ──
+// Server-side fetch to Yahoo Finance GC=F (Gold Futures)
+// No CORS issues because browser → Vercel (same origin) → Yahoo Finance
+async function fetchLiveCandles() {
+    const res = await fetch('/api/gold', { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'API returned error');
+    return json.candles;
 }
 
-async function fetchCurrentPriceBfx() {
-    const url = 'https://api-pub.bitfinex.com/v2/ticker/tXAUUSD';
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) return null;
-    const d = await res.json(); // [bid, bid_size, ask, ask_size, daily_change, ..., last_price, ...]
-    return d[6] ? parseFloat(d[6]) : null; // index 6 = last trade price
+async function fetchCurrentPrice() {
+    // Lightweight single-value fetch from the same API (last candle close)
+    try {
+        const json = await (await fetch('/api/gold')).json();
+        if (json.ok && json.candles.length) {
+            return json.candles[json.candles.length - 1].close;
+        }
+    } catch (_) {}
+    return null;
 }
 
 // ── Main Init ──
 async function init() {
     const loading = document.getElementById('loading-screen');
     try {
-        const [candles, currentPrice] = await Promise.all([
-            fetchBitfinex(),
-            fetchCurrentPriceBfx(),
-        ]);
+        const candles = await fetchLiveCandles();
+        const currentPrice = candles.length ? candles[candles.length - 1].close : null;
 
         candleSeries.setData(candles);
 
@@ -186,7 +180,8 @@ async function init() {
 
         setInterval(async () => {
             try {
-                const [fresh, livePrice] = await Promise.all([fetchBitfinex(), fetchCurrentPriceBfx()]);
+                const fresh = await fetchLiveCandles();
+                const livePrice = fresh.length ? fresh[fresh.length - 1].close : null;
                 if (fresh.length) {
                     candleSeries.setData(fresh);
                     const p = livePrice ?? fresh[fresh.length - 1].close;

@@ -1,94 +1,61 @@
-// Vercel Serverless Function (CommonJS - works on all Node versions)
-// Uses Stooq.com for free reliable XAUUSD data
-
-const https = require('https');
+// Vercel Serverless Function - Node.js 18 (native fetch)
+// Fetches Gold Futures (GC=F) OHLCV from Yahoo Finance server-side
 
 module.exports = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
+    res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=60');
 
-    // Last 10 days
-    const now  = new Date();
-    const past = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000);
-    const d2 = now.toISOString().slice(0,10).replace(/-/g,'');
-    const d1 = past.toISOString().slice(0,10).replace(/-/g,'');
-
-    const url = `https://stooq.com/q/d/l/?s=xauusd&i=h&d1=${d1}&d2=${d2}`;
+    const url = 'https://query2.finance.yahoo.com/v8/finance/chart/GC%3DF?interval=4h&range=10d';
 
     try {
-        const csv = await fetchText(url);
+        const resp = await fetch(url, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Referer': 'https://finance.yahoo.com/',
+            }
+        });
 
-        if (!csv || csv.trim().length < 50 || csv.includes('<html')) {
-            throw new Error('Stooq returned no valid data');
+        if (!resp.ok) {
+            return res.status(502).json({ ok: false, error: `Yahoo HTTP ${resp.status}` });
         }
 
-        const lines  = csv.trim().split('\n');
-        const header = lines[0].toLowerCase();
-        const hasTime = header.includes('time');
+        const data = await resp.json();
+        const result = data?.chart?.result?.[0];
+
+        if (!result || !result.timestamp) {
+            return res.status(502).json({ ok: false, error: 'No chart data in Yahoo response' });
+        }
+
+        const timestamps = result.timestamp;
+        const q = result.indicators.quote[0];
         const candles = [];
 
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].trim().split(',');
-            if (cols.length < 5) continue;
-
-            let time, open, high, low, close;
-            if (hasTime) {
-                // Date, Time, Open, High, Low, Close
-                const [y, m, d] = cols[0].split('-');
-                const timeParts = cols[1].split(':');
-                time  = Math.floor(new Date(`${y}-${m}-${d}T${timeParts[0]}:${timeParts[1]}:00Z`).getTime() / 1000);
-                open  = parseFloat(cols[2]);
-                high  = parseFloat(cols[3]);
-                low   = parseFloat(cols[4]);
-                close = parseFloat(cols[5]);
-            } else {
-                // Date, Open, High, Low, Close
-                const [y, m, d] = cols[0].split('-');
-                time  = Math.floor(new Date(`${y}-${m}-${d}T12:00:00Z`).getTime() / 1000);
-                open  = parseFloat(cols[1]);
-                high  = parseFloat(cols[2]);
-                low   = parseFloat(cols[3]);
-                close = parseFloat(cols[4]);
+        for (let i = 0; i < timestamps.length; i++) {
+            const o = q.open[i], h = q.high[i], l = q.low[i], c = q.close[i];
+            if (o && h && l && c) {
+                candles.push({
+                    time:  timestamps[i],
+                    open:  parseFloat(o.toFixed(2)),
+                    high:  parseFloat(h.toFixed(2)),
+                    low:   parseFloat(l.toFixed(2)),
+                    close: parseFloat(c.toFixed(2)),
+                });
             }
-
-            if (isNaN(time) || isNaN(open) || isNaN(close)) continue;
-            candles.push({ time, open, high, low, close });
         }
 
         candles.sort((a, b) => a.time - b.time);
 
-        // Deduplicate
-        const seen = new Set();
-        const unique = candles.filter(c => {
-            if (seen.has(c.time)) return false;
-            seen.add(c.time); return true;
+        return res.status(200).json({
+            ok: true,
+            candles,
+            count: candles.length,
+            source: 'Yahoo Finance GC=F'
         });
 
-        if (unique.length < 2) throw new Error('Not enough candles');
-
-        res.status(200).json({ ok: true, candles: unique, count: unique.length });
-
     } catch (err) {
-        res.status(500).json({ ok: false, error: err.message });
+        return res.status(500).json({ ok: false, error: err.message });
     }
 };
-
-function fetchText(url) {
-    return new Promise((resolve, reject) => {
-        https.get(url, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0',
-                'Accept': 'text/html,*/*',
-                'Connection': 'keep-alive',
-            }
-        }, (resp) => {
-            if (resp.statusCode >= 300 && resp.statusCode < 400 && resp.headers.location) {
-                return fetchText(resp.headers.location).then(resolve).catch(reject);
-            }
-            if (resp.statusCode !== 200) return reject(new Error('HTTP ' + resp.statusCode));
-            let data = '';
-            resp.on('data', chunk => { data += chunk; });
-            resp.on('end', () => resolve(data));
-        }).on('error', reject);
-    });
-}
