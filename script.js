@@ -1,18 +1,18 @@
 // ════════════════════════════════════════════════════
 // Gold Nightmare Intelligence Lab – Premium Live Chart
-// Fetches real XAUUSD H1 candles from Yahoo Finance
+// Data: Stooq.com via allorigins proxy (no API key)
 // ════════════════════════════════════════════════════
 
 const isMobile = window.innerWidth <= 768;
 
 // ── Chart Setup ──
 const chart = LightweightCharts.createChart(document.getElementById('tvchart'), {
-    width:  window.innerWidth,
+    width: window.innerWidth,
     height: window.innerHeight,
     layout: { backgroundColor: '#0d1017', textColor: '#787b86', fontSize: 11 },
     grid: {
-        vertLines: { color: 'rgba(255,255,255,0.02)', style: 1 },
-        horzLines: { color: 'rgba(255,255,255,0.02)', style: 1 },
+        vertLines: { color: 'rgba(255,255,255,0.025)', style: 1 },
+        horzLines: { color: 'rgba(255,255,255,0.025)', style: 1 },
     },
     crosshair: {
         mode: 1,
@@ -35,35 +35,30 @@ const candleSeries = chart.addCandlestickSeries({
     wickUpColor: '#089981', wickDownColor: '#f23645',
     lastValueVisible: true,
     priceLineVisible: true,
+    priceLineColor: '#2962FF',
 });
 
 // ── Helpers ──
 const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const $ = id => document.getElementById(id);
 const calcRR = (entry, sl, tp) => {
     const risk = Math.abs(sl - entry);
     const reward = Math.abs(tp - entry);
-    return risk === 0 ? 0 : reward / risk;
+    return risk === 0 ? 0 : (reward / risk).toFixed(2);
 };
 
-// ── DOM refs ──
-const $ = id => document.getElementById(id);
-const loadingScreen = $('loading-screen');
-
-// ── Trade Levels (will be calculated relative to live price) ──
+// ── Trade levels (built around current price) ──
 let LEVELS = {};
-
-function buildLevels(lastClose) {
-    // Place levels relative to current real price
-    const sl    = lastClose + 11.0;     // SL above current price (SELL setup)
-    const entryH = lastClose + 6.0;
-    const entryL = lastClose - 4.0;
-    const entryMid = (entryH + entryL) / 2;
-    const tp1   = lastClose - 23.2;
-    const tp2   = lastClose - 43.0;
-    const tp3   = lastClose - 55.9;
-    const vwap  = lastClose + 4.4;
-    const risk  = (sl - entryMid) * 10; // approx USD risk per 0.1 lot
-
+function buildLevels(price) {
+    const sl     = +(price + 11.0).toFixed(2);
+    const entryH = +(price + 6.0).toFixed(2);
+    const entryL = +(price - 4.0).toFixed(2);
+    const entryMid = +((entryH + entryL) / 2).toFixed(2);
+    const tp1    = +(price - 23.0).toFixed(2);
+    const tp2    = +(price - 43.0).toFixed(2);
+    const tp3    = +(price - 56.0).toFixed(2);
+    const vwap   = +(price + 4.4).toFixed(2);
+    const risk   = +((sl - entryMid) * 10).toFixed(2);
     LEVELS = { sl, entryH, entryL, entryMid, tp1, tp2, tp3, vwap, risk };
     updateDashboard();
     updateLineLabels();
@@ -71,32 +66,24 @@ function buildLevels(lastClose) {
 
 function updateDashboard() {
     const { sl, entryH, entryL, tp1, tp2, tp3, risk } = LEVELS;
-    const rr1 = calcRR(entryH, sl, tp1).toFixed(2);
-    const rr2 = calcRR(entryH, sl, tp2).toFixed(2);
-    const rr3 = calcRR(entryH, sl, tp3).toFixed(2);
-
     $('d-entry').textContent = `${fmt(entryL)} – ${fmt(entryH)}`;
-    $('d-stop').textContent  = `${fmt(sl)} | RISK -${fmt(Math.abs(risk))}$`;
-    $('d-tp1').textContent   = `${fmt(tp1)} | 1:${rr1}`;
-    $('d-tp2').textContent   = `${fmt(tp2)} | 1:${rr2}`;
-    $('d-tp3').textContent   = `${fmt(tp3)} | 1:${rr3}`;
+    $('d-stop').textContent  = `${fmt(sl)}  |  RISK -${fmt(Math.abs(risk))}$`;
+    $('d-tp1').textContent   = `${fmt(tp1)}  |  1:${calcRR(entryH, sl, tp1)}`;
+    $('d-tp2').textContent   = `${fmt(tp2)}  |  1:${calcRR(entryH, sl, tp2)}`;
+    $('d-tp3').textContent   = `${fmt(tp3)}  |  1:${calcRR(entryH, sl, tp3)}`;
 }
 
 function updateLineLabels() {
     const { sl, entryH, entryL, tp1, tp2, tp3, vwap, risk } = LEVELS;
-    const rr1 = calcRR(entryH, sl, tp1).toFixed(2);
-    const rr2 = calcRR(entryH, sl, tp2).toFixed(2);
-    const rr3 = calcRR(entryH, sl, tp3).toFixed(2);
-
-    $('label-sl').textContent    = `SL ${fmt(sl)} (-${fmt(Math.abs(risk))}$)`;
+    $('label-sl').textContent    = `SL ${fmt(sl)}  (-${fmt(Math.abs(risk))}$)`;
     $('label-vwap').textContent  = `VWAP-D ${fmt(vwap)}`;
     $('label-entry').textContent = `ENTRY ${fmt(entryL)}–${fmt(entryH)}`;
-    $('label-tp1').textContent   = `TP1 ${fmt(tp1)}  1:${rr1}`;
-    $('label-tp2').textContent   = `TP2 ${fmt(tp2)}  1:${rr2}`;
-    $('label-tp3').textContent   = `TP3 ${fmt(tp3)}  1:${rr3}`;
+    $('label-tp1').textContent   = `TP1 ${fmt(tp1)}  1:${calcRR(entryH, sl, tp1)}`;
+    $('label-tp2').textContent   = `TP2 ${fmt(tp2)}  1:${calcRR(entryH, sl, tp2)}`;
+    $('label-tp3').textContent   = `TP3 ${fmt(tp3)}  1:${calcRR(entryH, sl, tp3)}`;
 }
 
-// ── Overlay Sync (60 FPS) ──
+// ── 60fps Overlay Sync ──
 function syncOverlays() {
     if (!LEVELS.sl) return;
     const pts = {
@@ -123,43 +110,85 @@ function syncOverlays() {
 }
 (function loop() { syncOverlays(); requestAnimationFrame(loop); })();
 
-// ── Live Price Display ──
+// ── Live Price Bar ──
 let prevClose = null;
-function updateLivePriceBar(price) {
-    const el = $('live-price-val');
-    const ch = $('live-price-change');
-    el.textContent = fmt(price);
+function updatePriceBar(price) {
+    $('live-price-val').textContent = fmt(price);
     if (prevClose !== null) {
-        const diff = price - prevClose;
+        const diff = +(price - prevClose).toFixed(2);
         const pct  = ((diff / prevClose) * 100).toFixed(2);
+        const ch   = $('live-price-change');
         ch.textContent = `${diff >= 0 ? '+' : ''}${fmt(diff)} (${diff >= 0 ? '+' : ''}${pct}%)`;
-        ch.className = 'price-change ' + (diff >= 0 ? 'up' : 'down');
+        ch.className   = 'price-change ' + (diff >= 0 ? 'up' : 'down');
     }
     prevClose = price;
 }
 
-// ── Fetch Real XAUUSD H1 Data via Vercel Serverless Function ──
-// The /api/gold route fetches from Yahoo Finance server-side (no CORS issues)
-async function fetchLiveData() {
-    const res = await fetch('/api/gold?interval=1h&range=5d');
-    if (!res.ok) throw new Error(`API error ${res.status}`);
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'API returned error');
-    return json.candles; // already sorted asc
+// ── Parse Stooq CSV ──
+function parseStooqCSV(csv) {
+    const lines  = csv.trim().split('\n');
+    const header = lines[0].toLowerCase();
+    const hasTime = header.includes('time');
+    const candles = [];
+
+    for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].trim().split(',');
+        if (cols.length < 5) continue;
+        let time, open, high, low, close;
+        if (hasTime) {
+            const [y, m, d] = cols[0].split('-');
+            const [hh, mm]  = cols[1].split(':');
+            time  = Math.floor(new Date(`${y}-${m}-${d}T${hh}:${mm}:00Z`).getTime() / 1000);
+            open  = parseFloat(cols[2]); high = parseFloat(cols[3]);
+            low   = parseFloat(cols[4]); close = parseFloat(cols[5]);
+        } else {
+            const [y, m, d] = cols[0].split('-');
+            time  = Math.floor(new Date(`${y}-${m}-${d}T12:00:00Z`).getTime() / 1000);
+            open  = parseFloat(cols[1]); high = parseFloat(cols[2]);
+            low   = parseFloat(cols[3]); close = parseFloat(cols[4]);
+        }
+        if (!isNaN(time) && !isNaN(open) && !isNaN(close) && open > 0)
+            candles.push({ time, open, high, low, close });
+    }
+    candles.sort((a, b) => a.time - b.time);
+    const seen = new Set();
+    return candles.filter(c => { if (seen.has(c.time)) return false; seen.add(c.time); return true; });
 }
 
-// ── Live Update Loop (every 30 seconds) ──
-async function refreshLiveCandle() {
-    try {
-        const candles = await fetchLiveData();
-        if (!candles.length) return;
+// ── Fetch Live Data ──
+async function fetchData() {
+    const stooqUrl = 'https://stooq.com/q/d/l/?s=xauusd&i=h';
 
+    // Try multiple CORS proxies
+    const proxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(stooqUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(stooqUrl)}`,
+        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(stooqUrl)}`,
+    ];
+
+    for (const proxyUrl of proxies) {
+        try {
+            const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(8000) });
+            if (!res.ok) continue;
+            const text = await res.text();
+            if (!text || text.length < 50 || text.startsWith('<')) continue;
+            const candles = parseStooqCSV(text);
+            if (candles.length >= 5) return candles;
+        } catch (_) { /* try next proxy */ }
+    }
+    throw new Error('All proxies failed');
+}
+
+// ── Init ──
+async function init() {
+    const loading = $('loading-screen');
+    try {
+        const candles = await fetchData();
         candleSeries.setData(candles);
         const last = candles[candles.length - 1];
-        updateLivePriceBar(last.close);
+        updatePriceBar(last.close);
         buildLevels(last.close);
 
-        // Update date display
         const d = new Date(last.time * 1000);
         $('live-date').textContent = d.toLocaleString('en-GB', {
             year: 'numeric', month: '2-digit', day: '2-digit',
@@ -167,43 +196,28 @@ async function refreshLiveCandle() {
         }) + ' Amman';
 
         chart.timeScale().scrollToRealTime();
+
+        // Auto-refresh every 60s
+        setInterval(async () => {
+            try {
+                const fresh = await fetchData();
+                if (fresh.length) {
+                    candleSeries.setData(fresh);
+                    const l = fresh[fresh.length - 1];
+                    updatePriceBar(l.close);
+                    buildLevels(l.close);
+                    chart.timeScale().scrollToRealTime();
+                }
+            } catch (_) {}
+        }, 60000);
+
     } catch (e) {
-        console.warn('Live refresh skipped:', e.message);
+        console.warn('Live data failed, using last known price:', e.message);
+        $('live-price-val').textContent = 'Loading failed';
+        $('live-date').textContent = 'Check connection';
+        buildLevels(2400); // last-known fallback
     }
-}
-
-// ── Init ──
-async function init() {
-    try {
-        const candles = await fetchLiveData();
-        if (candles.length) {
-            candleSeries.setData(candles);
-            const last = candles[candles.length - 1];
-            updateLivePriceBar(last.close);
-            buildLevels(last.close);
-
-            const d = new Date(last.time * 1000);
-            $('live-date').textContent = d.toLocaleString('en-GB', {
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Amman'
-            }) + ' Amman';
-
-            chart.timeScale().scrollToRealTime();
-        }
-    } catch (e) {
-        console.error('Failed to load live data:', e.message);
-        // Graceful degradation with latest known price approximation
-        const fallbackPrice = 2400;
-        buildLevels(fallbackPrice);
-        $('live-price-val').textContent = '~' + fmt(fallbackPrice);
-        $('live-date').textContent = 'Offline mode';
-    }
-
-    // Hide loading screen
-    loadingScreen.classList.add('hidden');
-
-    // Auto-refresh every 30s for live candle updates
-    setInterval(refreshLiveCandle, 30000);
+    loading.classList.add('hidden');
 }
 
 // ── Resize ──
@@ -213,5 +227,4 @@ window.addEventListener('resize', () => {
     chart.timeScale().applyOptions({ rightOffset: m ? 10 : 30, barSpacing: m ? 5 : 7 });
 });
 
-// ── Run ──
 init();
