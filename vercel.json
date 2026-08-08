@@ -1,8 +1,1 @@
-{
-  "functions": {
-    "api/gold.js": {
-      "runtime": "nodejs18.x",
-      "memory": 512
-    }
-  }
-}
+{}
