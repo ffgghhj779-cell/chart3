@@ -138,53 +138,14 @@ function updateLivePriceBar(price) {
     prevClose = price;
 }
 
-// ── Fetch Real XAUUSD H1 Data via Yahoo Finance ──
+// ── Fetch Real XAUUSD H1 Data via Vercel Serverless Function ──
+// The /api/gold route fetches from Yahoo Finance server-side (no CORS issues)
 async function fetchLiveData() {
-    // Yahoo Finance returns OHLCV for XAUUSD=X
-    // We use a CORS proxy to get around browser restrictions
-    const SYMBOL  = 'XAUUSD%3DX';
-    const RANGE   = '5d';
-    const INTERVAL = '1h';
-    const proxies = [
-        `https://query1.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=${INTERVAL}&range=${RANGE}`,
-        `https://query2.finance.yahoo.com/v8/finance/chart/${SYMBOL}?interval=${INTERVAL}&range=${RANGE}`,
-    ];
-
-    let raw = null;
-    for (const url of proxies) {
-        try {
-            const res = await fetch(url, { mode: 'cors' });
-            if (res.ok) { raw = await res.json(); break; }
-        } catch (_) { /* try next */ }
-    }
-
-    // If CORS fails, use corsproxy.io as fallback
-    if (!raw) {
-        try {
-            const proxy = `https://corsproxy.io/?` + encodeURIComponent(
-                `https://query1.finance.yahoo.com/v8/finance/chart/XAUUSD%3DX?interval=1h&range=5d`
-            );
-            const res = await fetch(proxy);
-            if (res.ok) raw = await res.json();
-        } catch (_) {}
-    }
-
-    if (!raw) throw new Error('All data sources failed');
-
-    const result = raw.chart.result[0];
-    const timestamps = result.timestamp;
-    const q = result.indicators.quote[0];
-    const candles = [];
-
-    for (let i = 0; i < timestamps.length; i++) {
-        const o = q.open[i], h = q.high[i], l = q.low[i], c = q.close[i];
-        if (!o || !h || !l || !c) continue;
-        candles.push({ time: timestamps[i], open: o, high: h, low: l, close: c });
-    }
-
-    // Sort by time (ascending)
-    candles.sort((a, b) => a.time - b.time);
-    return candles;
+    const res = await fetch('/api/gold?interval=1h&range=5d');
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'API returned error');
+    return json.candles; // already sorted asc
 }
 
 // ── Live Update Loop (every 30 seconds) ──
