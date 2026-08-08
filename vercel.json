@@ -1,5 +1,8 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
-  ]
+  "functions": {
+    "api/gold.js": {
+      "runtime": "nodejs18.x",
+      "memory": 512
+    }
+  }
 }
