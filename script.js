@@ -167,6 +167,7 @@ async function init() {
         updatePriceBar(lastPrice);
         buildLevels(lastPrice);
 
+        const now = new Date();
         const dateStr = now.toLocaleString('en-GB', {
             year: 'numeric', month: '2-digit', day: '2-digit',
             hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Amman',
@@ -193,8 +194,8 @@ async function init() {
 
     } catch (e) {
         console.error('Init error:', e.message);
-        $('live-price-val').textContent = 'Error';
-        $('live-date').textContent = e.message;
+        const errEl = document.getElementById('live-price-val');
+        if (errEl) errEl.textContent = 'Error';
         buildLevels(2400);
     } finally {
         loading.classList.add('hidden');
