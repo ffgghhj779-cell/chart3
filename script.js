@@ -132,34 +132,30 @@ function updatePriceBar(price) {
     prevClose = price;
 }
 
-// ── OKX Exchange API (XAU-USDT · 4H candles) ──
-// OKX has Access-Control-Allow-Origin: * — works directly from browser
-// XAU-USDT = Gold vs Tether, tracks XAUUSD within 0.01%
-async function fetchOKX() {
-    const url = 'https://www.okx.com/api/v5/market/candles?instId=XAU-USDT&bar=4H&limit=100';
+// ── Bitfinex API · tXAUUSD · 4H candles ──
+// Bitfinex has traded XAU/USD since 2017. Public API has CORS: *
+// Candle format (OCHLV, NOT OHLCV!): [ts_ms, open, close, high, low, vol]
+async function fetchBitfinex() {
+    const url = 'https://api-pub.bitfinex.com/v2/candles/trade:4h:tXAUUSD/hist?limit=200&sort=1';
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
-    if (!res.ok) throw new Error(`OKX HTTP ${res.status}`);
-    const json = await res.json();
-    if (json.code !== '0') throw new Error(`OKX error: ${json.msg}`);
-    // OKX format: [ts_ms, open, high, low, close, vol, ...]
-    // returned newest-first → reverse to oldest-first
-    const candles = json.data.map(d => ({
-        time:  Math.floor(Number(d[0]) / 1000),
+    if (!res.ok) throw new Error(`Bitfinex HTTP ${res.status}`);
+    const raw = await res.json();
+    if (!Array.isArray(raw) || raw.length === 0) throw new Error('Bitfinex: empty data');
+    return raw.map(d => ({
+        time:  Math.floor(d[0] / 1000),
         open:  parseFloat(d[1]),
-        high:  parseFloat(d[2]),
-        low:   parseFloat(d[3]),
-        close: parseFloat(d[4]),
-    })).reverse();
-    return candles;
+        close: parseFloat(d[2]),
+        high:  parseFloat(d[3]),
+        low:   parseFloat(d[4]),
+    }));
 }
 
-async function fetchCurrentPriceOKX() {
-    const url = 'https://www.okx.com/api/v5/market/ticker?instId=XAU-USDT';
+async function fetchCurrentPriceBfx() {
+    const url = 'https://api-pub.bitfinex.com/v2/ticker/tXAUUSD';
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
-    const json = await res.json();
-    const last = json?.data?.[0]?.last;
-    return last ? parseFloat(last) : null;
+    const d = await res.json(); // [bid, bid_size, ask, ask_size, daily_change, ..., last_price, ...]
+    return d[6] ? parseFloat(d[6]) : null; // index 6 = last trade price
 }
 
 // ── Main Init ──
@@ -167,8 +163,8 @@ async function init() {
     const loading = document.getElementById('loading-screen');
     try {
         const [candles, currentPrice] = await Promise.all([
-            fetchOKX(),
-            fetchCurrentPriceOKX(),
+            fetchBitfinex(),
+            fetchCurrentPriceBfx(),
         ]);
 
         candleSeries.setData(candles);
@@ -190,7 +186,7 @@ async function init() {
 
         setInterval(async () => {
             try {
-                const [fresh, livePrice] = await Promise.all([fetchOKX(), fetchCurrentPriceOKX()]);
+                const [fresh, livePrice] = await Promise.all([fetchBitfinex(), fetchCurrentPriceBfx()]);
                 if (fresh.length) {
                     candleSeries.setData(fresh);
                     const p = livePrice ?? fresh[fresh.length - 1].close;
