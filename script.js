@@ -132,46 +132,43 @@ function updatePriceBar(price) {
     prevClose = price;
 }
 
-// ── CoinGecko: OHLC data for XAUT (Tether Gold) ──
-// CoinGecko is CORS-enabled, free, no API key needed.
-// XAUT price ≈ XAUUSD within 0.1% (backed 1:1 by gold)
-async function fetchCoinGeckoOHLC(days) {
-    const url = `https://api.coingecko.com/api/v3/coins/tether-gold/ohlc?vs_currency=usd&days=${days}`;
-    const res = await fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
-    const raw = await res.json(); // [[timestamp_ms, open, high, low, close], ...]
-    if (!Array.isArray(raw) || raw.length === 0) throw new Error('Empty OHLC response');
-    const candles = raw.map(([ts, o, h, l, c]) => ({
-        time: Math.floor(ts / 1000),
-        open: +o.toFixed(2), high: +h.toFixed(2),
-        low:  +l.toFixed(2), close: +c.toFixed(2),
-    }));
-    candles.sort((a, b) => a.time - b.time);
-    // Deduplicate
-    const seen = new Set();
-    return candles.filter(c => { if (seen.has(c.time)) return false; seen.add(c.time); return true; });
+// ── OKX Exchange API (XAU-USDT · 4H candles) ──
+// OKX has Access-Control-Allow-Origin: * — works directly from browser
+// XAU-USDT = Gold vs Tether, tracks XAUUSD within 0.01%
+async function fetchOKX() {
+    const url = 'https://www.okx.com/api/v5/market/candles?instId=XAU-USDT&bar=4H&limit=100';
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) throw new Error(`OKX HTTP ${res.status}`);
+    const json = await res.json();
+    if (json.code !== '0') throw new Error(`OKX error: ${json.msg}`);
+    // OKX format: [ts_ms, open, high, low, close, vol, ...]
+    // returned newest-first → reverse to oldest-first
+    const candles = json.data.map(d => ({
+        time:  Math.floor(Number(d[0]) / 1000),
+        open:  parseFloat(d[1]),
+        high:  parseFloat(d[2]),
+        low:   parseFloat(d[3]),
+        close: parseFloat(d[4]),
+    })).reverse();
+    return candles;
 }
 
-// ── Also fetch current live price from CoinGecko ──
-async function fetchCurrentPrice() {
-    const url = 'https://api.coingecko.com/api/v3/simple/price?ids=tether-gold&vs_currencies=usd';
+async function fetchCurrentPriceOKX() {
+    const url = 'https://www.okx.com/api/v5/market/ticker?instId=XAU-USDT';
     const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!res.ok) throw new Error(`Price fetch HTTP ${res.status}`);
+    if (!res.ok) return null;
     const json = await res.json();
-    return json['tether-gold']?.usd ?? null;
+    const last = json?.data?.[0]?.last;
+    return last ? parseFloat(last) : null;
 }
 
 // ── Main Init ──
 async function init() {
-    const loading = $('loading-screen');
+    const loading = document.getElementById('loading-screen');
     try {
-        // Fetch 14 days of OHLC (gives ~4H candles) + current price
         const [candles, currentPrice] = await Promise.all([
-            fetchCoinGeckoOHLC(14),
-            fetchCurrentPrice(),
+            fetchOKX(),
+            fetchCurrentPriceOKX(),
         ]);
 
         candleSeries.setData(candles);
@@ -191,22 +188,17 @@ async function init() {
 
         chart.timeScale().scrollToRealTime();
 
-        // Refresh every 4 minutes (CoinGecko free rate limit: 10-30 req/min)
         setInterval(async () => {
             try {
-                const [fresh, livePrice] = await Promise.all([
-                    fetchCoinGeckoOHLC(14),
-                    fetchCurrentPrice(),
-                ]);
+                const [fresh, livePrice] = await Promise.all([fetchOKX(), fetchCurrentPriceOKX()]);
                 if (fresh.length) {
                     candleSeries.setData(fresh);
                     const p = livePrice ?? fresh[fresh.length - 1].close;
-                    updatePriceBar(p);
-                    buildLevels(p);
+                    updatePriceBar(p); buildLevels(p);
                     chart.timeScale().scrollToRealTime();
                 }
             } catch (_) {}
-        }, 4 * 60 * 1000);
+        }, 60000);
 
     } catch (e) {
         console.error('Init error:', e.message);
